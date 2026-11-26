@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PokeVerse Online - Multiplayer Monster RPG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gb-dark: #0f172a;
+            --gb-panel: #1e293b;
+            --gb-accent: #ef4444;
+            --gb-screen: #9bbc0f;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-pixel {
+            font-family: 'Press Start 2P', monospace;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Battle & UI Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+        @keyframes attackLungePlayer {
+            0% { transform: translate(0, 0); }
+            40% { transform: translate(35px, -20px) scale(1.1); }
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes attackLungeEnemy {
+            0% { transform: translate(0, 0); }
+            40% { transform: translate(-35px, 20px) scale(1.1); }
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-20deg); }
+            75% { transform: rotate(20deg); }
+        }
+        @keyframes flashWhite {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(3) invert(0.2); }
+        }
+        .anim-float { animation: float 2.4s ease-in-out infinite; }
+        .anim-shake { animation: shake 0.4s ease-in-out; }
+        .anim-lunge-player { animation: attackLungePlayer 0.35s ease-out; }
+        .anim-lunge-enemy { animation: attackLungeEnemy 0.35s ease-out; }
+        .anim-wobble { animation: wobble 0.6s ease-in-out infinite; }
+        .anim-hit { animation: flashWhite 0.25s ease-in-out 2; }
+
+        /* Retro scanline overlay for game screen */
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        .btn-3d {
+            transition: all 0.1s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.4);
+        }
+        .btn-3d:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- TOP SERVER STATUS BAR -->
+    <header class="bg-slate-900/95 border-b border-slate-800 px-3 py-2 sticky top-0 z-40 backdrop-blur">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-b from-red-500 via-red-600 to-white border-2 border-slate-950 flex items-center justify-center relative shadow-md">
+                    <div class="w-full h-0.5 bg-slate-950 absolute"></div>
+                    <div class="w-2.5 h-2.5 rounded-full bg-white border-2 border-slate-950 z-10"></div>
+                </div>
+                <div>
+                    <h1 class="font-pixel text-xs sm:text-sm text-amber-400 tracking-wider">POKEVERSE ONLINE</h1>
+                    <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                        <span class="flex items-center gap-1">
+                            <span id="server-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span id="server-region">ASIA-SOUTH-01</span>
+                        </span>
+                        <span>•</span>
+                        <span>Ping: <strong id="server-ping" class="text-emerald-400">24ms</strong></span>
+                        <span>•</span>
+                        <span>Online: <strong id="online-count" class="text-sky-400">1</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trainer Quick Stats & Controls -->
+            <div class="flex items-center gap-2">
+                <div id="header-trainer-badge" class="hidden sm:flex items-center gap-2 bg-slate-800/90 border border-slate-700 px-3 py-1 rounded-full text-xs">
+                    <span class="text-amber-400 font-bold" id="hdr-name">Trainer</span>
+                    <span class="text-slate-500">|</span>
+                    <span class="text-emerald-400">🏆 <span id="hdr-wins">0</span>W</span>
+                    <span class="text-sky-400">🔮 <span id="hdr-caught">1</span></span>
+                    <span class="text-yellow-300">💰 $<span id="hdr-money">500</span></span>
+                </div>
+                <button type="button" id="btn-sound" onclick="AudioEngine.toggleMute()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold" title="Toggle Sound">
+                    🔊 SFX
+                </button>
+                <button type="button" onclick="openModal('modal-server-logs')" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-sky-400">
+                    📡 Server
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT GRID -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- LEFT/CENTER: MAIN CONSOLE VIEWPORT (7 cols on lg) -->
+        <section class="lg:col-span-7 flex flex-col gap-3">
+            <!-- Console Bezel -->
+            <div class="bg-slate-900 border-2 border-slate-700/80 rounded-2xl p-2 sm:p-3 shadow-2xl relative overflow-hidden">
+                <!-- Top Console Indicator -->
+                <div class="flex items-center justify-between mb-2 px-1">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
+                        <span class="text-[10px] font-pixel text-slate-400 uppercase" id="screen-mode-label">OVERWORLD // PALLET VALLEY</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button type="button" onclick="healAllParty(true)" class="text-[11px] bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-semibold">
+                            🏥 Quick Heal
+                        </button>
+                        <button type="button" onclick="openShopModal()" class="text-[11px] bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-semibold">
+                            🏪 PokeMart
+                        </button>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT CONTAINER (Aspect 4:3 on desktop, adaptive on mobile) -->
+                <div class="relative w-full aspect-[4/3] max-h-[520px] bg-slate-950 rounded-xl overflow-hidden border-2 border-slate-800 shadow-inner">
+                    
+                    <!-- 1. OVERWORLD CANVAS -->
+                    <canvas id="overworld-canvas" class="w-full h-full block"></canvas>
+
+                    <!-- 2. TURN-BASED BATTLE SCREEN -->
+                    <div id="battle-screen" class="hidden absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-sky-300 via-sky-200 to-emerald-200 text-slate-900 z-20">
+                        <!-- Battle Top Status Bar -->
+                        <div class="p-2 sm:p-3 flex justify-between items-start z-10">
+                            <!-- Enemy HUD -->
+                            <div class="bg-slate-900/90 text-white border-2 border-slate-700 rounded-xl p-2 sm:p-2.5 w-44 sm:w-56 shadow-lg">
+                                <div class="flex justify-between items-center text-xs font-bold mb-1">
+                                    <span id="enemy-name" class="truncate text-amber-300">WILD MON</span>
+                                    <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">Lv.<span id="enemy-lvl">5</span></span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[9px] font-pixel text-amber-400">HP</span>
+                                    <div class="flex-1 h-2.5 bg-slate-700 rounded-full overflow-hidden border border-slate-600">
+                                        <div id="enemy-hp-bar" class="h-full bg-emerald-400 transition-all duration-300" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center mt-1 text-[10px] text-slate-400">
+                                    <span id="enemy-type-badge" class="uppercase font-bold px-1.5 rounded bg-slate-800">GRASS</span>
+                                    <span id="enemy-hp-text">20/20</span>
+                                </div>
+                            </div>
+
+                            <!-- PvP / Wild Tag -->
+                            <div id="battle-mode-tag" class="bg-red-600 text-white font-pixel text-[9px] px-2.5 py-1 rounded-full shadow border border-red-400">
+                                WILD ENCOUNTER
+                            </div>
+                        </div>
+
+                        <!-- Battle Arena Visuals -->
+                        <div class="relative flex-1 flex items-center justify-between px-4 sm:px-10">
+                            <!-- Enemy Platform & Sprite -->
+                            <div class="absolute right-6 sm:right-14 top-1 sm:top-4 flex flex-col items-center">
+                                <div id="enemy-sprite-box" class="w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center anim-float z-10">
+                                    <!-- SVG injected by JS -->
+                                </div>
+                                <div class="w-28 sm:w-36 h-7 bg-emerald-600/40 border-2 border-emerald-700/30 rounded-[100%] -mt-4"></div>
+                            </div>
+
+                            <!-- Capture Orb Animation Overlay -->
+                            <div id="capture-orb-anim" class="hidden absolute right-14 sm:right-24 top-10 z-20">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-b from-red-500 to-white border-2 border-slate-900 shadow-lg flex items-center justify-center anim-wobble">
+                                    <div class="w-2 h-2 rounded-full bg-white border border-slate-900"></div>
+                                </div>
+                            </div>
+
+                            <!-- Player Platform & Sprite -->
+                            <div class="absolute left-6 sm:left-14 bottom-1 sm:bottom-3 flex flex-col items-center">
+                                <div id="player-sprite-box" class="w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center z-10">
+                                    <!-- SVG injected by JS -->
+                                </div>
+                                <div class="w-32 sm:w-40 h-8 bg-emerald-600/40 border-2 border-emerald-700/30 rounded-[100%] -mt-5"></div>
+                            </div>
+
+                            <!-- Player HUD -->
+                            <div class="absolute right-2 sm:right-4 bottom-2 bg-slate-900/90 text-white border-2 border-slate-700 rounded-xl p-2 sm:p-2.5 w-48 sm:w-60 shadow-lg z-10">
+                                <div class="flex justify-between items-center text-xs font-bold mb-1">
+                                    <span id="player-mon-name" class="truncate text-sky-300">EMBERCUB</span>
+                                    <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">Lv.<span id="player-mon-lvl">5</span></span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[9px] font-pixel text-amber-400">HP</span>
+                                    <div class="flex-1 h-2.5 bg-slate-700 rounded-full overflow-hidden border border-slate-600">
+                                        <div id="player-hp-bar" class="h-full bg-emerald-400 transition-all duration-300" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center mt-1 text-[10px] text-slate-300">
+                                    <span id="player-type-badge" class="uppercase font-bold px-1.5 rounded bg-slate-800">FIRE</span>
+                                    <span id="player-hp-text">22/22</span>
+                                </div>
+                                <!-- XP Bar -->
+                                <div class="mt-1.5 flex items-center gap-1">
+                                    <span class="text-[8px] font-pixel text-sky-400">XP</span>
+                                    <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                        <div id="player-xp-bar" class="h-full bg-sky-400 transition-all duration-300" style="width: 20%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Battle Command Deck -->
+                        <div class="bg-slate-900 border-t-2 border-slate-700 p-2 sm:p-3 text-white grid grid-cols-1 sm:grid-cols-12 gap-2 z-20">
+                            <!-- Battle Dialogue Log -->
+                            <div class="sm:col-span-6 bg-slate-950 border border-slate-700 rounded-lg p-2.5 flex items-center min-h-[64px]">
+                                <p id="battle-log-text" class="text-xs sm:text-sm font-medium leading-snug text-slate-100">
+                                    A wild creature appeared! What will you do?
+                                </p>
+                            </div>
+
+                            <!-- Action Buttons / Submenus -->
+                            <div id="battle-actions-main" class="sm:col-span-6 grid grid-cols-2 gap-1.5">
+                                <button type="button" onclick="showBattleMoves()" class="btn-3d bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-3 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5">
+                                    ⚔️ FIGHT
+                                </button>
+                                <button type="button" onclick="showBattleBag()" class="btn-3d bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-3 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5">
+                                    🎒 BAG
+                                </button>
+                                <button type="button" onclick="showBattleParty()" class="btn-3d bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5">
+                                    🐾 PARTY
+                                </button>
+                                <button type="button" onclick="attemptRun()" class="btn-3d bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-3 rounded-lg text-xs sm:text-sm flex items-center justify-center gap-1.5">
+                                    🏃 RUN
+                                </button>
+                            </div>
+
+                            <!-- Moves Submenu -->
+                            <div id="battle-actions-moves" class="hidden sm:col-span-6 grid grid-cols-2 gap-1.5">
+                                <!-- Injected dynamically -->
+                            </div>
+
+                            <!-- Bag Submenu -->
+                            <div id="battle-actions-bag" class="hidden sm:col-span-6 grid grid-cols-2 gap-1.5">
+                                <button type="button" onclick="useBagItem('potion')" class="btn-3d bg-emerald-700 hover:bg-emerald-600 p-1.5 rounded-lg text-left text-xs">
+                                    <div class="font-bold">🧪 Potion (<span id="bag-potion-count">3</span>)</div>
+                                    <div class="text-[10px] text-emerald-200">Restores 25 HP</div>
+                                </button>
+                                <button type="button" onclick="useBagItem('orb')" class="btn-3d bg-rose-700 hover:bg-rose-600 p-1.5 rounded-lg text-left text-xs">
+                                    <div class="font-bold">🔴 Capture Orb (<span id="bag-orb-count">5</span>)</div>
+                                    <div class="text-[10px] text-rose-200">Catch wild mon</div>
+                                </button>
+                                <button type="button" onclick="useBagItem('superorb')" class="btn-3d bg-indigo-700 hover:bg-indigo-600 p-1.5 rounded-lg text-left text-xs">
+                                    <div class="font-bold">🟣 Ultra Orb (<span id="bag-superorb-count">1</span>)</div>
+                                    <div class="text-[10px] text-indigo-200">2x Catch Rate</div>
+                                </button>
+                                <button type="button" onclick="resetBattleMenu()" class="btn-3d bg-slate-700 hover:bg-slate-600 p-1.5 rounded-lg font-bold text-xs flex items-center justify-center">
+                                    ↩ Back
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transition Flash Overlay -->
+                    <div id="battle-flash" class="hidden absolute inset-0 bg-white z-30 pointer-events-none"></div>
+                    <!-- Subtle CRT lines -->
+                    <div class="crt-overlay absolute inset-0 z-10"></div>
+                </div>
+
+                <!-- MOBILE / ON-SCREEN CONTROLS + PARTY BAR -->
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                    <!-- D-Pad for Touch & Click -->
+                    <div class="sm:col-span-5 flex items-center justify-center gap-4 bg-slate-800/70 p-2 rounded-xl border border-slate-700/60">
+                        <div class="grid grid-cols-3 gap-1 w-28 h-28">
+                            <div></div>
+                            <button type="button" onpointerdown="setMoveInput('up', true)" onpointerup="setMoveInput('up', false)" onpointerleave="setMoveInput('up', false)" onpointercancel="setMoveInput('up', false)" class="bg-slate-700 active:bg-amber-500 rounded-lg flex items-center justify-center text-lg font-bold shadow">▲</button>
+                            <div></div>
+                            <button type="button" onpointerdown="setMoveInput('left', true)" onpointerup="setMoveInput('left', false)" onpointerleave="setMoveInput('left', false)" onpointercancel="setMoveInput('left', false)" class="bg-slate-700 active:bg-amber-500 rounded-lg flex items-center justify-center text-lg font-bold shadow">◀</button>
+                            <div class="bg-slate-900 rounded-lg flex items-center justify-center text-[10px] text-slate-500">PAD</div>
+                            <button type="button" onpointerdown="setMoveInput('right', true)" onpointerup="setMoveInput('right', false)" onpointerleave="setMoveInput('right', false)" onpointercancel="setMoveInput('right', false)" class="bg-slate-700 active:bg-amber-500 rounded-lg flex items-center justify-center text-lg font-bold shadow">▶</button>
+                            <div></div>
+                            <button type="button" onpointerdown="setMoveInput('down', true)" onpointerup="setMoveInput('down', false)" onpointerleave="setMoveInput('down', false)" onpointercancel="setMoveInput('down', false)" class="bg-slate-700 active:bg-amber-500 rounded-lg flex items-center justify-center text-lg font-bold shadow">▼</button>
+                            <div></div>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button type="button" onclick="interactOverworld()" class="btn-3d w-14 h-14 rounded-full bg-red-600 active:bg-red-500 text-white font-pixel text-xs shadow-lg border-2 border-red-400">
+                                A
+                            </button>
+                            <span class="text-[10px] text-center text-slate-400">Interact / Grass</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Squad Bar -->
+                    <div class="sm:col-span-7 bg-slate-800/70 p-2.5 rounded-xl border border-slate-700/60">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Your Squad (<span id="party-count">1</span>/6)</span>
+                            <button type="button" onclick="triggerWildEncounter()" class="text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-0.5 rounded-full font-semibold shadow">
+                                🌿 Hunt Wild Mon
+                            </button>
+                        </div>
+                        <div id="party-slots" class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                            <!-- Party cards injected by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT: ONLINE MULTIPLAYER SERVER LOBBY, CHAT & LEADERBOARD (5 cols on lg) -->
+        <aside class="lg:col-span-5 flex flex-col gap-3">
+            <!-- Matchmaking & Quick PvP Banner -->
+            <div class="bg-gradient-to-r from-indigo-900/90 via-slate-900 to-purple-900/90 border border-indigo-500/40 rounded-2xl p-3.5 shadow-xl">
+                <div class="flex items-center justify-between gap-2">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-500/30">Ranked & Casual PvP</span>
+                        <h2 class="text-base font-extrabold text-white mt-1">Online Battle Arena</h2>
+                        <p class="text-xs text-slate-300">Battle real online trainers or challenge Server Bots!</p>
+                    </div>
+                    <button type="button" onclick="startQuickMatchmaking()" id="btn-quick-match" class="btn-3d bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-lg whitespace-nowrap">
+                        ⚡ Quick PvP
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs: Lobby / Global Chat / Leaderboard -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl flex-1 flex flex-col overflow-hidden shadow-xl min-h-[420px]">
+                <div class="grid grid-cols-3 border-b border-slate-800 bg-slate-950/60 text-xs font-bold">
+                    <button type="button" onclick="switchLobbyTab('trainers')" id="tab-trainers" class="py-2.5 text-amber-400 border-b-2 border-amber-400 bg-slate-900/60">
+                        🌐 Trainers (<span id="tab-online-count">1</span>)
+                    </button>
+                    <button type="button" onclick="switchLobbyTab('chat')" id="tab-chat" class="py-2.5 text-slate-400 hover:text-slate-200">
+                        💬 Global Chat
+                    </button>
+                    <button type="button" onclick="switchLobbyTab('ranks')" id="tab-ranks" class="py-2.5 text-slate-400 hover:text-slate-200">
+                        🏆 Leaderboard
+                    </button>
+                </div>
+
+                <!-- TAB 1: ONLINE TRAINERS LOBBY -->
+                <div id="panel-trainers" class="p-3 flex-1 overflow-y-auto space-y-2 max-h-[430px]">
+                    <div class="flex justify-between items-center text-[11px] text-slate-400 pb-1">
+                        <span>Connected to <strong class="text-slate-200">Global Relay</strong></span>
+                        <span id="your-uid-tag" class="font-mono text-[10px] text-slate-500">ID: connecting...</span>
+                    </div>
+                    <div id="online-trainers-list" class="space-y-2">
+                        <!-- Trainer rows injected by JS -->
+                    </div>
+                </div>
+
+                <!-- TAB 2: GLOBAL REAL-TIME CHAT -->
+                <div id="panel-chat" class="hidden flex-1 flex flex-col max-h-[430px]">
+                    <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-2 text-xs">
+                        <div class="bg-slate-800/60 text-sky-300 p-2 rounded-lg border border-slate-700/50">
+                            <strong>[SERVER]:</strong> Welcome to PokeVerse Online! Walk in tall grass to catch monsters or challenge trainers in the lobby.
+                        </div>
+                    </div>
+                    <form onsubmit="sendChatMessage(event)" class="p-2 border-t border-slate-800 bg-slate-950 flex gap-1.5">
+                        <input type="text" id="chat-input" maxlength="120" placeholder="Say hello to online trainers..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400">
+                        <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">
+                            Send
+                        </button>
+                    </form>
+                </div>
+
+                <!-- TAB 3: LEADERBOARD -->
+                <div id="panel-ranks" class="hidden p-3 flex-1 overflow-y-auto space-y-2 max-h-[430px]">
+                    <div class="text-[11px] text-slate-400 mb-1">Top Trainers by PvP Wins & Monsters Caught</div>
+                    <div id="leaderboard-list" class="space-y-1.5">
+                        <!-- Leaderboard rows injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- MODAL 1: TRAINER CREATION / STARTER SELECTION -->
+    <div id="modal-starter" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-amber-500/50 rounded-2xl max-w-lg w-full p-5 shadow-2xl">
+            <div class="text-center mb-4">
+                <span class="text-[10px] font-pixel text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30">SERVER CONNECTION READY</span>
+                <h2 class="text-xl font-extrabold text-white mt-2">Create Your Trainer Profile</h2>
+                <p class="text-xs text-slate-400 mt-1">Choose your name and starter partner to enter the online world.</p>
+            </div>
+
+            <div class="mb-4">
+                <label className="block text-xs font-bold text-slate-300 mb-1">Trainer Name</label>
+                <input type="text" id="input-trainer-name" maxlength="16" placeholder="e.g. Ash, Red, Misty..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400">
+            </div>
+
+            <label className="block text-xs font-bold text-slate-300 mb-2">Choose Your Starter Partner</label>
+            <div class="grid grid-cols-3 gap-2.5 mb-5">
+                <button type="button" onclick="selectStarterChoice('embercub')" id="starter-card-embercub" class="starter-card border-2 border-amber-400 bg-slate-800/90 rounded-xl p-2.5 text-center transition hover:scale-[1.02]">
+                    <div class="w-16 h-16 mx-auto" id="preview-embercub"></div>
+                    <div class="font-bold text-xs text-orange-400 mt-1">Embercub</div>
+                    <span class="text-[10px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded font-bold">FIRE</span>
+                </button>
+                <button type="button" onclick="selectStarterChoice('aquafin')" id="starter-card-aquafin" class="starter-card border-2 border-slate-700 bg-slate-800/50 rounded-xl p-2.5 text-center transition hover:scale-[1.02]">
+                    <div class="w-16 h-16 mx-auto" id="preview-aquafin"></div>
+                    <div class="font-bold text-xs text-sky-400 mt-1">Aquafin</div>
+                    <span class="text-[10px] bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded font-bold">WATER</span>
+                </button>
+                <button type="button" onclick="selectStarterChoice('leafsprout')" id="starter-card-leafsprout" class="starter-card border-2 border-slate-700 bg-slate-800/50 rounded-xl p-2.5 text-center transition hover:scale-[1.02]">
+                    <div class="w-16 h-16 mx-auto" id="preview-leafsprout"></div>
+                    <div class="font-bold text-xs text-emerald-400 mt-1">Leafsprout</div>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">GRASS</span>
+                </button>
+            </div>
+
+            <button type="button" onclick="completeTrainerSetup()" class="btn-3d w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold py-3 rounded-xl text-sm shadow-lg">
+                🚀 Connect to Online World
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SERVER LOGS & DIAGNOSTICS -->
+    <div id="modal-server-logs" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">📡 Game Server Telemetry</h3>
+                <button type="button" onclick="closeModal('modal-server-logs')" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                    <div class="text-slate-400 text-[10px]">CLUSTER NODE</div>
+                    <div class="font-mono font-bold text-emerald-400">asia-south1-poke01</div>
+                </div>
+                <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                    <div class="text-slate-400 text-[10px]">TICK RATE / SYNC</div>
+                    <div class="font-mono font-bold text-amber-400">20Hz Realtime</div>
+                </div>
+            </div>
+            <div id="server-log-console" class="bg-slate-950 font-mono text-[11px] text-emerald-400 p-3 rounded-xl h-48 overflow-y-auto space-y-1 border border-slate-800">
+                <div>[SYS] Initializing PokeVerse Game Server...</div>
+            </div>
+            <button type="button" onclick="closeModal('modal-server-logs')" class="mt-3 w-full bg-slate-800 hover:bg-slate-700 py-2 rounded-lg text-xs font-bold">Close</button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: POKEMART SHOP & PARTY SWITCH -->
+    <div id="modal-generic" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-3">
+                <h3 id="modal-generic-title" class="font-bold text-sm text-amber-400">PokeMart</h3>
+                <button type="button" onclick="closeModal('modal-generic')" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+            </div>
+            <div id="modal-generic-body" class="space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION BANNER -->
+    <div id="toast-banner" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 border-2 border-amber-400 text-white px-4 py-2.5 rounded-full shadow-2xl z-50 text-xs font-bold flex items-center gap-2">
+        <span id="toast-text">Notification</span>
+    </div>
+
+    <!-- FIREBASE & COMPLETE CORRECTED GAME ENGINE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // 1. WEB AUDIO SYNTHESIZER
+        // ==========================================
+        const AudioEngine = {
+            ctx: null,
+            muted: false,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            },
+            toggleMute() {
+                this.muted = !this.muted;
+                const btn = document.getElementById('btn-sound');
+                if (btn) btn.textContent = this.muted ? '🔇 MUTE' : '🔊 SFX';
+            },
+            playTone(freq, type = 'square', duration = 0.12, vol = 0.08, delay = 0) {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + delay);
+                    osc.stop(this.ctx.currentTime + delay + duration);
+                } catch (e) {}
+            },
+            sfxStep() { this.playTone(140, 'triangle', 0.04, 0.03); },
+            sfxEncounter() {
+                [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.playTone(f, 'square', 0.09, 0.07, i * 0.07));
+            },
+            sfxHit() {
+                this.playTone(180, 'sawtooth', 0.12, 0.1);
+                this.playTone(110, 'square', 0.15, 0.1, 0.05);
+            },
+            sfxCatch() {
+                [440, 554, 659, 880].forEach((f, i) => this.playTone(f, 'triangle', 0.14, 0.09, i * 0.11));
+            },
+            sfxHeal() {
+                [523, 659, 784, 1046].forEach((f, i) => this.playTone(f, 'sine', 0.16, 0.09, i * 0.14));
+            }
+        };
+        window.AudioEngine = AudioEngine;
+
+        // ==========================================
+        // 2. MONSTER DATABASE & CUSTOM SVG SPRITES
+        // ==========================================
+        const MONSTER_DEX = {
+            embercub: {
+                id: 'embercub', name: 'Embercub', type: 'fire', baseHp: 24, atk: 12, def: 9, spd: 11,
+                moves: [
+                    { name: 'Scratch', type: 'normal', power: 35, pp: 30 },
+                    { name: 'Ember', type: 'fire', power: 45, pp: 25 },
+                    { name: 'Flame Bite', type: 'fire', power: 60, pp: 15 },
+                    { name: 'Quick Dash', type: 'normal', power: 40, pp: 20 }
+                ]
+            },
+            aquafin: {
+                id: 'aquafin', name: 'Aquafin', type: 'water', baseHp: 26, atk: 10, def: 11, spd: 10,
+                moves: [
+                    { name: 'Tackle', type: 'normal', power: 35, pp: 30 },
+                    { name: 'Water Gun', type: 'water', power: 45, pp: 25 },
+                    { name: 'Bubble Beam', type: 'water', power: 60, pp: 15 },
+                    { name: 'Tail Whip', type: 'normal', power: 40, pp: 20 }
+                ]
+            },
+            leafsprout: {
+                id: 'leafsprout', name: 'Leafsprout', type: 'grass', baseHp: 27, atk: 10, def: 12, spd: 9,
+                moves: [
+                    { name: 'Vine Whip', type: 'grass', power: 45, pp: 25 },
+                    { name: 'Tackle', type: 'normal', power: 35, pp: 30 },
+                    { name: 'Razor Leaf', type: 'grass', power: 60, pp: 15 },
+                    { name: 'Seed Bomb', type: 'grass', power: 55, pp: 15 }
+                ]
+            },
+            sparkmouse: {
+                id: 'sparkmouse', name: 'Sparkmouse', type: 'electric', baseHp: 22, atk: 13, def: 8, spd: 14,
+                moves: [
+                    { name: 'Thunder Shock', type: 'electric', power: 45, pp: 25 },
+                    { name: 'Quick Attack', type: 'normal', power: 40, pp: 30 },
+                    { name: 'Spark Bolt', type: 'electric', power: 65, pp: 15 },
+                    { name: 'Iron Tail', type: 'normal', power: 55, pp: 15 }
+                ]
+            },
+            pebbleon: {
+                id: 'pebbleon', name: 'Pebbleon', type: 'normal', baseHp: 30, atk: 11, def: 14, spd: 7,
+                moves: [
+                    { name: 'Rock Slam', type: 'normal', power: 45, pp: 25 },
+                    { name: 'Headbutt', type: 'normal', power: 55, pp: 20 },
+                    { name: 'Mud Slap', type: 'grass', power: 40, pp: 20 },
+                    { name: 'Body Press', type: 'normal', power: 65, pp: 10 }
+                ]
+            },
+            voltbird: {
+                id: 'voltbird', name: 'Voltbird', type: 'electric', baseHp: 23, atk: 12, def: 9, spd: 13,
+                moves: [
+                    { name: 'Peck', type: 'normal', power: 35, pp: 30 },
+                    { name: 'Zap Wing', type: 'electric', power: 50, pp: 20 },
+                    { name: 'Gust', type: 'normal', power: 45, pp: 25 },
+                    { name: 'Sky Spark', type: 'electric', power: 65, pp: 15 }
+                ]
+            }
+        };
+
+        function getMonsterSVG(id, flip = false) {
+            const transform = flip ? 'transform="scale(-1, 1) translate(-100, 0)"' : '';
+            const sprites = {
+                embercub: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md"><g ${transform}>
+                    <path d="M72 68 Q92 50 82 32 Q74 44 68 42" fill="#f97316"/>
+                    <path d="M76 62 Q86 50 80 39" fill="#facc15"/>
+                    <ellipse cx="48" cy="62" rx="22" ry="20" fill="#fb923c"/>
+                    <circle cx="48" cy="36" r="18" fill="#fb923c"/>
+                    <polygon points="33,24 38,8 45,21" fill="#ea580c"/>
+                    <polygon points="63,24 58,8 51,21" fill="#ea580c"/>
+                    <circle cx="42" cy="34" r="3.5" fill="#0f172a"/><circle cx="43" cy="33" r="1.2" fill="#fff"/>
+                    <circle cx="55" cy="34" r="3.5" fill="#0f172a"/><circle cx="56" cy="33" r="1.2" fill="#fff"/>
+                    <ellipse cx="48" cy="64" rx="12" ry="11" fill="#fed7aa"/>
+                </g></svg>`,
+                aquafin: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md"><g ${transform}>
+                    <path d="M68 62 Q90 48 86 72 Q74 70 66 68" fill="#0284c7"/>
+                    <ellipse cx="48" cy="60" rx="22" ry="21" fill="#38bdf8"/>
+                    <circle cx="48" cy="38" r="18" fill="#38bdf8"/>
+                    <path d="M44 20 Q48 6 54 20" fill="#0284c7"/>
+                    <circle cx="41" cy="36" r="3.5" fill="#0f172a"/><circle cx="42" cy="35" r="1.2" fill="#fff"/>
+                    <circle cx="55" cy="36" r="3.5" fill="#0f172a"/><circle cx="56" cy="35" r="1.2" fill="#fff"/>
+                    <ellipse cx="48" cy="63" rx="13" ry="12" fill="#bae6fd"/>
+                </g></svg>`,
+                leafsprout: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md"><g ${transform}>
+                    <ellipse cx="48" cy="62" rx="22" ry="19" fill="#4ade80"/>
+                    <circle cx="48" cy="40" r="17" fill="#4ade80"/>
+                    <path d="M48 24 Q30 6 24 22 Q38 26 48 24" fill="#16a34a"/>
+                    <path d="M48 24 Q66 6 72 22 Q58 26 48 24" fill="#15803d"/>
+                    <circle cx="41" cy="38" r="3.5" fill="#0f172a"/><circle cx="42" cy="37" r="1.2" fill="#fff"/>
+                    <circle cx="55" cy="38" r="3.5" fill="#0f172a"/><circle cx="56" cy="37" r="1.2" fill="#fff"/>
+                    <circle cx="36" cy="44" r="3" fill="#16a34a" opacity="0.6"/>
+                    <circle cx="60" cy="44" r="3" fill="#16a34a" opacity="0.6"/>
+                </g></svg>`,
+                sparkmouse: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md"><g ${transform}>
+                    <polygon points="66,64 88,46 78,44 92,28 70,48 78,52" fill="#eab308"/>
+                    <ellipse cx="48" cy="62" rx="20" ry="20" fill="#facc15"/>
+                    <circle cx="48" cy="38" r="17" fill="#facc15"/>
+                    <polygon points="34,26 24,6 42,22" fill="#facc15"/><polygon points="27,13 24,6 32,12" fill="#0f172a"/>
+                    <polygon points="62,26 72,6 54,22" fill="#facc15"/><polygon points="69,13 72,6 64,12" fill="#0f172a"/>
+                    <circle cx="41" cy="36" r="3.5" fill="#0f172a"/>
+                    <circle cx="55" cy="36" r="3.5" fill="#0f172a"/>
+                    <circle cx="35" cy="43" r="4" fill="#ef4444"/>
+                    <circle cx="61" cy="43" r="4" fill="#ef4444"/>
+                </g></svg>`,
+                pebbleon: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md"><g ${transform}>
+                    <polygon points="26,72 22,46 38,26 62,26 78,46 74,72" fill="#94a3b8" stroke="#475569" stroke-width="3"/>
+                    <circle cx="41" cy="46" r="4" fill="#0f172a"/><circle cx="42" cy="45" r="1.5" fill="#facc15"/>
+                    <circle cx="59" cy="46" r="4" fill="#0f172a"/><circle cx="60" cy="45" r="1.5" fill="#facc15"/>
+                    <path d="M40 60 L48 56 L56 60" stroke="#334155" stroke-width="3" fill="none"/>
+                </g></svg>`,
+                voltbird: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md"><g ${transform}>
+                    <polygon points="20,52 42,44 38,62" fill="#eab308"/>
+                    <polygon points="80,52 58,44 62,62" fill="#eab308"/>
+                    <ellipse cx="50" cy="54" rx="18" ry="22" fill="#fef08a"/>
+                    <polygon points="44,32 50,14 56,32" fill="#f59e0b"/>
+                    <circle cx="44" cy="44" r="3" fill="#0f172a"/>
+                    <circle cx="56" cy="44" r="3" fill="#0f172a"/>
+                    <polygon points="46,48 54,48 50,56" fill="#f97316"/>
+                </g></svg>`
+            };
+            return sprites[id] || sprites.embercub;
+        }
+
+        const TYPE_CHART = {
+            fire: { grass: 2, water: 0.5, fire: 0.5, electric: 1, normal: 1 },
+            water: { fire: 2, grass: 0.5, water: 0.5, electric: 1, normal: 1 },
+            grass: { water: 2, fire: 0.5, grass: 0.5, electric: 1, normal: 1 },
+            electric: { water: 2, grass: 0.5, electric: 0.5, fire: 1, normal: 1 },
+            normal: { fire: 1, water: 1, grass: 1, electric: 1, normal: 1 }
+        };
+
+        function createMonsterInstance(speciesId, level = 5) {
+            const base = MONSTER_DEX[speciesId];
+            const maxHp = base.baseHp + level * 4;
+            return {
+                uid: Math.random().toString(36).slice(2, 9),
+                speciesId,
+                name: base.name,
+                type: base.type,
+                level,
+                hp: maxHp,
+                maxHp,
+                atk: base.atk + Math.floor(level * 1.8),
+                def: base.def + Math.floor(level * 1.5),
+                spd: base.spd + Math.floor(level * 1.5),
+                xp: 0,
+                nextXp: level * 30,
+                moves: base.moves.map(m => ({ ...m, currentPp: m.pp }))
+            };
+        }
+
+        // ==========================================
+        // 3. GAME STATE & SIMULATED + FIREBASE SERVER
+        // ==========================================
+        const state = {
+            userId: 'local-' + Math.random().toString(36).slice(2, 8),
+            trainerName: 'Trainer',
+            starterChoice: 'embercub',
+            money: 500,
+            wins: 0,
+            caughtCount: 1,
+            party: [],
+            bag: { potion: 3, orb: 5, superorb: 1 },
+            playerPos: { x: 8, y: 8 },
+            playerDir: 'down',
+            inBattle: false,
+            battle: null,
+            onlineTrainers: {},
+            db: null,
+            auth: null,
+            appId: 'pokeverse-online',
+            firebaseReady: false
+        };
+
+        const SERVER_BOTS = [
+            { uid: 'bot-red', name: 'Champion Red', level: 8, monster: 'embercub', wins: 42, caught: 18, status: 'In Lobby', isBot: true, updatedAt: Date.now() },
+            { uid: 'bot-misty', name: 'Misty_Water', level: 6, monster: 'aquafin', wins: 19, caught: 11, status: 'Exploring', isBot: true, updatedAt: Date.now() },
+            { uid: 'bot-surge', name: 'Lt. Surge', level: 7, monster: 'sparkmouse', wins: 27, caught: 14, status: 'Ready for PvP', isBot: true, updatedAt: Date.now() }
+        ];
+
+        function logServer(msg) {
+            const box = document.getElementById('server-log-console');
+            if (!box) return;
+            const time = new Date().toLocaleTimeString([], { hour12: false });
+            const div = document.createElement('div');
+            div.textContent = `[${time}] ${msg}`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById('toast-banner');
+            const txt = document.getElementById('toast-text');
+            if (!el || !txt) return;
+            txt.textContent = msg;
+            el.classList.remove('hidden');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        async function initMultiplayerBackend() {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    state.appId = typeof __app_id !== 'undefined' ? __app_id : 'pokeverse-online';
+                    const app = initializeApp(firebaseConfig);
+                    state.auth = getAuth(app);
+                    state.db = getFirestore(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(state.auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(state.auth);
+                    }
+
+                    if (state.auth.currentUser) {
+                        state.userId = state.auth.currentUser.uid;
+                        state.firebaseReady = true;
+                        logServer(`Authenticated with Cloud Relay (${state.userId.slice(0, 8)}...)`);
+                        subscribeToOnlineServer();
+                    }
+                } else {
+                    logServer('Running in Local Simulated Server Mode.');
+                }
+            } catch (err) {
+                logServer(`Relay fallback active: ${err.message}`);
+            }
+            const uidTag = document.getElementById('your-uid-tag');
+            if (uidTag) uidTag.textContent = `ID: ${state.userId.slice(0, 10)}`;
+            renderLobbyAndLeaderboard();
+        }
+
+        function subscribeToOnlineServer() {
+            if (!state.firebaseReady || !state.auth.currentUser) return;
+            const trainersCol = collection(state.db, 'artifacts', state.appId, 'public', 'data', 'trainers');
+            onSnapshot(trainersCol, (snap) => {
+                snap.docChanges().forEach((change) => {
+                    if (change.type === 'removed') {
+                        delete state.onlineTrainers[change.doc.id];
+                    } else {
+                        const data = change.doc.data();
+                        state.onlineTrainers[change.doc.id] = { uid: change.doc.id, ...data, isBot: false };
+                    }
+                });
+                renderLobbyAndLeaderboard();
+            }, (err) => logServer(`Presence sync warning: ${err.message}`));
+
+            const chatCol = collection(state.db, 'artifacts', state.appId, 'public', 'data', 'global_chat');
+            onSnapshot(chatCol, (snap) => {
+                const msgs = [];
+                snap.forEach(d => msgs.push({ id: d.id, ...d.data() }));
+                msgs.sort((a, b) => (a.clientTime || 0) - (b.clientTime || 0));
+                renderChatMessages(msgs.slice(-30));
+            }, (err) => logServer(`Chat sync warning: ${err.message}`));
+        }
+
+        async function syncTrainerPresence(statusText = 'Exploring') {
+            const lead = state.party[0] || createMonsterInstance(state.starterChoice, 5);
+            const payload = {
+                name: state.trainerName,
+                level: lead.level,
+                monster: lead.speciesId,
+                wins: state.wins,
+                caught: state.caughtCount,
+                status: statusText,
+                updatedAt: Date.now()
+            };
+            state.onlineTrainers[state.userId] = { uid: state.userId, ...payload, isBot: false };
+            renderLobbyAndLeaderboard();
+
+            if (state.firebaseReady && state.auth.currentUser) {
+                try {
+                    const ref = doc(state.db, 'artifacts', state.appId, 'public', 'data', 'trainers', state.userId);
+                    await setDoc(ref, payload, { merge: true });
+                } catch (e) {}
+            }
+        }
+
+        // ==========================================
+        // 4. STARTER SETUP & UI UPDATES
+        // ==========================================
+        window.selectStarterChoice = function(id) {
+            state.starterChoice = id;
+            ['embercub', 'aquafin', 'leafsprout'].forEach(k => {
+                const card = document.getElementById(`starter-card-${k}`);
+                if (!card) return;
+                if (k === id) {
+                    card.classList.remove('border-slate-700', 'bg-slate-800/50');
+                    card.classList.add('border-amber-400', 'bg-slate-800/90');
+                } else {
+                    card.classList.add('border-slate-700', 'bg-slate-800/50');
+                    card.classList.remove('border-amber-400', 'bg-slate-800/90');
+                }
+            });
+            AudioEngine.playTone(520, 'triangle', 0.08);
+        };
+
+        window.completeTrainerSetup = function() {
+            const rawNameInput = document.getElementById('input-trainer-name');
+            const rawName = rawNameInput ? rawNameInput.value.trim() : '';
+            state.trainerName = rawName || 'Trainer_' + Math.floor(100 + Math.random() * 900);
+            state.party = [createMonsterInstance(state.starterChoice, 5)];
+            
+            const starterModal = document.getElementById('modal-starter');
+            if (starterModal) starterModal.classList.add('hidden');
+            
+            const hdrName = document.getElementById('hdr-name');
+            if (hdrName) hdrName.textContent = state.trainerName;
+            
+            AudioEngine.sfxCatch();
+            logServer(`Trainer "${state.trainerName}" joined ASIA-SOUTH-01 with ${MONSTER_DEX[state.starterChoice].name}.`);
+            showToast(`Welcome, ${state.trainerName}!`);
+            updateHUD();
+            syncTrainerPresence('Exploring');
+        };
+
+        function updateHUD() {
+            const winsEl = document.getElementById('hdr-wins');
+            const caughtEl = document.getElementById('hdr-caught');
+            const moneyEl = document.getElementById('hdr-money');
+            const partyCntEl = document.getElementById('party-count');
+            const potionCntEl = document.getElementById('bag-potion-count');
+            const orbCntEl = document.getElementById('bag-orb-count');
+            const superOrbCntEl = document.getElementById('bag-superorb-count');
+
+            if (winsEl) winsEl.textContent = state.wins;
+            if (caughtEl) caughtEl.textContent = state.caughtCount;
+            if (moneyEl) moneyEl.textContent = state.money;
+            if (partyCntEl) partyCntEl.textContent = state.party.length;
+            if (potionCntEl) potionCntEl.textContent = state.bag.potion;
+            if (orbCntEl) orbCntEl.textContent = state.bag.orb;
+            if (superOrbCntEl) superOrbCntEl.textContent = state.bag.superorb;
+
+            const slots = document.getElementById('party-slots');
+            if (!slots) return;
+            slots.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                const mon = state.party[i];
+                if (mon) {
+                    const hpPct = Math.max(0, Math.round((mon.hp / mon.maxHp) * 100));
+                    const barColor = hpPct > 50 ? 'bg-emerald-400' : hpPct > 20 ? 'bg-amber-400' : 'bg-red-500';
+                    slots.innerHTML += `
+                        <button type="button" onclick="promoteLeadMonster(${i})" class="bg-slate-900 border ${i === 0 ? 'border-amber-400' : 'border-slate-700'} rounded-lg p-1.5 text-left hover:border-sky-400 transition relative" title="Set as Lead">
+                            <div class="w-9 h-9 mx-auto">${getMonsterSVG(mon.speciesId)}</div>
+                            <div class="text-[10px] font-bold truncate text-center mt-0.5">${mon.name}</div>
+                            <div class="text-[9px] text-slate-400 text-center">Lv.${mon.level}</div>
+                            <div class="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                                <div class="h-full ${barColor}" style="width:${hpPct}%"></div>
+                            </div>
+                        </button>`;
+                } else {
+                    slots.innerHTML += `
+                        <div class="bg-slate-950/50 border border-dashed border-slate-800 rounded-lg p-1.5 flex items-center justify-center text-[10px] text-slate-600 min-h-[76px]">
+                            Empty
+                        </div>`;
+                }
+            }
+        }
+
+        window.promoteLeadMonster = function(index) {
+            if (index === 0 || !state.party[index]) return;
+            if (state.party[index].hp <= 0) {
+                showToast(`${state.party[index].name} has fainted!`);
+                return;
+            }
+            const chosen = state.party.splice(index, 1)[0];
+            state.party.unshift(chosen);
+            updateHUD();
+            syncTrainerPresence('Exploring');
+            showToast(`${chosen.name} is now your lead partner!`);
+        };
+
+        // ==========================================
+        // 5. LOBBY, CHAT & LEADERBOARD
+        // ==========================================
+        function getAllActiveTrainers() {
+            const map = new Map();
+            const now = Date.now();
+            SERVER_BOTS.forEach(b => map.set(b.uid, b));
+            Object.values(state.onlineTrainers).forEach(t => {
+                if (!t.isBot && t.updatedAt && (now - t.updatedAt > 180000)) {
+                    return;
+                }
+                map.set(t.uid, t);
+            });
+            return Array.from(map.values());
+        }
+
+        function renderLobbyAndLeaderboard() {
+            const trainers = getAllActiveTrainers();
+            const onlineCntEl = document.getElementById('online-count');
+            const tabCntEl = document.getElementById('tab-online-count');
+            if (onlineCntEl) onlineCntEl.textContent = trainers.length;
+            if (tabCntEl) tabCntEl.textContent = trainers.length;
+
+            const list = document.getElementById('online-trainers-list');
+            if (list) {
+                list.innerHTML = trainers.map(t => {
+                    const isSelf = t.uid === state.userId;
+                    return `
+                    <div class="bg-slate-950/90 border ${isSelf ? 'border-amber-500/40' : 'border-slate-800'} rounded-xl p-2.5 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-10 h-10 bg-slate-900 rounded-lg p-1 border border-slate-800 shrink-0">
+                                ${getMonsterSVG(t.monster || 'embercub')}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-bold text-xs text-white truncate">${t.name}</span>
+                                    ${isSelf ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 rounded">YOU</span>' : ''}
+                                    ${t.isBot ? '<span class="text-[9px] bg-sky-500/20 text-sky-300 px-1.5 rounded">BOT</span>' : '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 rounded">LIVE</span>'}
+                                </div>
+                                <div class="text-[11px] text-slate-400">
+                                    Lv.${t.level || 5} ${MONSTER_DEX[t.monster || 'embercub'] ? MONSTER_DEX[t.monster || 'embercub'].name : 'Mon'} • 🏆 ${t.wins || 0}W
+                                </div>
+                            </div>
+                        </div>
+                        ${!isSelf ? `
+                            <button type="button" onclick="challengeTrainer('${t.uid}')" class="btn-3d bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shrink-0">
+                                ⚔️ Battle
+                            </button>` : `<span class="text-[10px] text-emerald-400 font-semibold px-2">● Online</span>`}
+                    </div>`;
+                }).join('');
+            }
+
+            const ranked = [...trainers].sort((a, b) => (b.wins || 0) - (a.wins || 0));
+            const lb = document.getElementById('leaderboard-list');
+            if (lb) {
+                lb.innerHTML = ranked.map((t, idx) => `
+                    <div class="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <span class="font-pixel text-[10px] ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : 'text-amber-700'}">#${idx + 1}</span>
+                            <span class="font-bold text-white">${t.name}</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-[11px]">
+                            <span class="text-emerald-400 font-bold">🏆 ${t.wins || 0} Wins</span>
+                            <span class="text-sky-400">🔮 ${t.caught || 1}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        window.switchLobbyTab = function(tab) {
+            ['trainers', 'chat', 'ranks'].forEach(t => {
+                const panel = document.getElementById(`panel-${t}`);
+                if (panel) panel.classList.toggle('hidden', t !== tab);
+                const btn = document.getElementById(`tab-${t}`);
+                if (!btn) return;
+                if (t === tab) {
+                    btn.className = 'py-2.5 text-amber-400 border-b-2 border-amber-400 bg-slate-900/60';
+                } else {
+                    btn.className = 'py-2.5 text-slate-400 hover:text-slate-200';
+                }
+            });
+        };
+
+        function renderChatMessages(msgs) {
+            const box = document.getElementById('chat-messages');
+            if (!box) return;
+            box.innerHTML = `<div class="bg-slate-800/60 text-sky-300 p-2 rounded-lg border border-slate-700/50">
+                <strong>[SERVER]:</strong> Connected to Global Chat Channel #1.
+            </div>`;
+            msgs.forEach(m => {
+                const isMe = m.uid === state.userId;
+                const div = document.createElement('div');
+                div.className = `p-2 rounded-lg border ${isMe ? 'bg-amber-500/10 border-amber-500/30 text-amber-100' : 'bg-slate-950 border-slate-800 text-slate-200'}`;
+                div.innerHTML = `<strong class="${isMe ? 'text-amber-400' : 'text-emerald-400'}">${escapeHTML(m.sender || 'Trainer')}:</strong> ${escapeHTML(m.text || '')}`;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        window.sendChatMessage = async function(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('chat-input');
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+
+            if (state.firebaseReady && state.auth.currentUser) {
+                try {
+                    const chatCol = collection(state.db, 'artifacts', state.appId, 'public', 'data', 'global_chat');
+                    await addDoc(chatCol, {
+                        uid: state.userId,
+                        sender: state.trainerName,
+                        text,
+                        clientTime: Date.now(),
+                        createdAt: serverTimestamp()
+                    });
+                } catch (err) {
+                    logServer(`Chat error: ${err.message}`);
+                }
+            } else {
+                const box = document.getElementById('chat-messages');
+                if (box) {
+                    const div = document.createElement('div');
+                    div.className = 'p-2 rounded-lg border bg-amber-500/10 border-amber-500/30 text-amber-100';
+                    div.innerHTML = `<strong class="text-amber-400">${escapeHTML(state.trainerName)}:</strong> ${escapeHTML(text)}`;
+                    box.appendChild(div);
+                    box.scrollTop = box.scrollHeight;
+                }
+            }
+        };
+
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        // ==========================================
+        // 6. OVERWORLD TILEMAP & TIMESTEP MOVEMENT
+        // ==========================================
+        const MAP_COLS = 18;
+        const MAP_ROWS = 14;
+        const WORLD_MAP = [
+            [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
+            [3,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,3],
+            [3,1,1,1,0,0,4,4,0,0,5,5,0,1,1,1,1,3],
+            [3,1,1,0,0,0,4,4,0,0,5,5,0,0,1,1,1,3],
+            [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+            [3,0,0,1,1,1,0,0,0,0,0,0,2,2,2,0,0,3],
+            [3,0,0,1,1,1,0,0,0,0,0,0,2,2,2,0,0,3],
+            [3,0,0,0,0,0,0,0,0,0,0,0,2,2,2,0,0,3],
+            [3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3],
+            [3,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,3],
+            [3,1,1,1,1,0,0,2,2,0,1,1,1,1,1,0,0,3],
+            [3,1,1,1,0,0,0,2,2,0,0,1,1,1,1,0,0,3],
+            [3,1,1,0,0,0,0,0,0,0,0,0,1,1,1,0,0,3],
+            [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]
+        ];
+
+        const moveInputs = { up: false, down: false, left: false, right: false };
+        let moveAccumulator = 0;
+        const MOVEMENT_INTERVAL = 0.16; // Seconds per tile
+
+        window.setMoveInput = function(dir, active) {
+            moveInputs[dir] = active;
+        };
+
+        window.addEventListener('keydown', (e) => {
+            const activeTag = document.activeElement ? document.activeElement.tagName : '';
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+            if (['ArrowUp', 'w', 'W'].includes(e.key)) moveInputs.up = true;
+            if (['ArrowDown', 's', 'S'].includes(e.key)) moveInputs.down = true;
+            if (['ArrowLeft', 'a', 'A'].includes(e.key)) moveInputs.left = true;
+            if (['ArrowRight', 'd', 'D'].includes(e.key)) moveInputs.right = true;
+            if (e.key === ' ' || e.key === 'Enter') interactOverworld();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (['ArrowUp', 'w', 'W'].includes(e.key)) moveInputs.up = false;
+            if (['ArrowDown', 's', 'S'].includes(e.key)) moveInputs.down = false;
+            if (['ArrowLeft', 'a', 'A'].includes(e.key)) moveInputs.left = false;
+            if (['ArrowRight', 'd', 'D'].includes(e.key)) moveInputs.right = false;
+        });
+
+        function stepOverworld() {
+            let dx = 0, dy = 0;
+            if (moveInputs.up) { dy = -1; state.playerDir = 'up'; }
+            else if (moveInputs.down) { dy = 1; state.playerDir = 'down'; }
+            else if (moveInputs.left) { dx = -1; state.playerDir = 'left'; }
+            else if (moveInputs.right) { dx = 1; state.playerDir = 'right'; }
+
+            if (dx === 0 && dy === 0) return;
+
+            const nx = state.playerPos.x + dx;
+            const ny = state.playerPos.y + dy;
+            if (nx < 0 || ny < 0 || nx >= MAP_COLS || ny >= MAP_ROWS) return;
+
+            const tile = WORLD_MAP[ny][nx];
+            if (tile === 2 || tile === 3) return; // Blocked by water/trees
+
+            state.playerPos.x = nx;
+            state.playerPos.y = ny;
+            AudioEngine.sfxStep();
+
+            if (tile === 4) {
+                healAllParty(true);
+            } else if (tile === 5) {
+                openShopModal();
+            } else if (tile === 1) {
+                if (Math.random() < 0.26) {
+                    triggerWildEncounter();
+                }
+            }
+        }
+
+        window.interactOverworld = function() {
+            if (state.inBattle) return;
+            const tile = WORLD_MAP[state.playerPos.y][state.playerPos.x];
+            if (tile === 4) healAllParty(true);
+            else if (tile === 5) openShopModal();
+            else triggerWildEncounter();
+        };
+
+        function drawOverworld() {
+            const canvas = document.getElementById('overworld-canvas');
+            if (!canvas || !canvas.parentElement) return;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+                canvas.width = Math.floor(rect.width);
+                canvas.height = Math.floor(rect.height);
+            }
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            const tw = canvas.width / MAP_COLS;
+            const th = canvas.height / MAP_ROWS;
+
+            for (let r = 0; r < MAP_ROWS; r++) {
+                for (let c = 0; c < MAP_COLS; c++) {
+                    const t = WORLD_MAP[r][c];
+                    const x = c * tw;
+                    const y = r * th;
+
+                    ctx.fillStyle = '#86efac';
+                    ctx.fillRect(x, y, tw + 0.5, th + 0.5);
+
+                    if (t === 1) {
+                        ctx.fillStyle = '#22c55e';
+                        ctx.fillRect(x + 2, y + 2, tw - 4, th - 4);
+                        ctx.fillStyle = '#15803d';
+                        ctx.fillRect(x + tw * 0.25, y + th * 0.3, 3, th * 0.45);
+                        ctx.fillRect(x + tw * 0.65, y + th * 0.25, 3, th * 0.5);
+                    } else if (t === 2) {
+                        ctx.fillStyle = '#38bdf8';
+                        ctx.fillRect(x, y, tw + 0.5, th + 0.5);
+                        ctx.fillStyle = '#bae6fd';
+                        ctx.fillRect(x + tw * 0.2, y + th * 0.35, tw * 0.4, 2);
+                    } else if (t === 3) {
+                        ctx.fillStyle = '#166534';
+                        ctx.beginPath();
+                        ctx.arc(x + tw / 2, y + th / 2, Math.min(tw, th) * 0.42, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (t === 4) {
+                        ctx.fillStyle = '#f43f5e';
+                        ctx.fillRect(x + 1, y + 1, tw - 2, th - 2);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${Math.max(9, Math.floor(tw * 0.35))}px Inter`;
+                        ctx.fillText('+', x + tw * 0.36, y + th * 0.65);
+                    } else if (t === 5) {
+                        ctx.fillStyle = '#2563eb';
+                        ctx.fillRect(x + 1, y + 1, tw - 2, th - 2);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = `bold ${Math.max(8, Math.floor(tw * 0.3))}px Inter`;
+                        ctx.fillText('$', x + tw * 0.38, y + th * 0.65);
+                    }
+                }
+            }
+
+            SERVER_BOTS.forEach((bot, i) => {
+                const bx = (4 + i * 5) * tw + tw / 2;
+                const by = (4 + (i % 2) * 4) * th + th / 2;
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.arc(bx, by, Math.min(tw, th) * 0.32, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+
+            const px = state.playerPos.x * tw + tw / 2;
+            const py = state.playerPos.y * th + th / 2;
+            const rad = Math.min(tw, th) * 0.36;
+
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(px, py + rad * 0.85, rad * 0.8, rad * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(px, py, rad, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(px - rad * 0.3, py - rad * 0.1, rad * 0.18, 0, Math.PI * 2);
+            ctx.arc(px + rad * 0.3, py - rad * 0.1, rad * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+            ctx.fillRect(px - 26, py - rad - 14, 52, 11);
+            ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 8px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.trainerName.slice(0, 8), px, py - rad - 6);
+        }
+
+        // ==========================================
+        // 7. TURN-BASED BATTLE ENGINE
+        // ==========================================
+        function getFirstHealthyMonster() {
+            if (!Array.isArray(state.party)) return null;
+            return state.party.find(m => m && m.hp > 0) || null;
+        }
+
+        window.triggerWildEncounter = function() {
+            if (state.inBattle) return;
+            const activeMon = getFirstHealthyMonster();
+            if (!activeMon) {
+                healAllParty(true);
+                return;
+            }
+            const speciesKeys = Object.keys(MONSTER_DEX);
+            const randomSpecies = speciesKeys[Math.floor(Math.random() * speciesKeys.length)];
+            const wildLevel = Math.max(2, activeMon.level + Math.floor(Math.random() * 3) - 1);
+            const wildMon = createMonsterInstance(randomSpecies, wildLevel);
+
+            startBattle({
+                isPvP: false,
+                opponentName: 'Wild ' + wildMon.name,
+                enemyParty: [wildMon]
+            });
+        };
+
+        window.challengeTrainer = function(uid) {
+            if (state.inBattle) return;
+            const activeMon = getFirstHealthyMonster();
+            if (!activeMon) {
+                healAllParty(true);
+                return;
+            }
+            const target = getAllActiveTrainers().find(t => t && t.uid === uid);
+            if (!target) return;
+
+            const oppLevel = Math.max(4, target.level || activeMon.level);
+            const oppLead = createMonsterInstance(target.monster || 'embercub', oppLevel);
+            const oppSecond = createMonsterInstance('sparkmouse', Math.max(3, oppLevel - 1));
+
+            logServer(`Starting PvP match vs ${target.name}...`);
+            startBattle({
+                isPvP: true,
+                opponentName: target.name,
+                enemyParty: [oppLead, oppSecond]
+            });
+        };
+
+        window.startQuickMatchmaking = function() {
+            const btn = document.getElementById('btn-quick-match');
+            if (!btn) return;
+            btn.textContent = '🔍 Searching...';
+            logServer('Matchmaking queue joined. Finding opponent...');
+            setTimeout(() => {
+                btn.textContent = '⚡ Quick PvP';
+                const opponents = getAllActiveTrainers().filter(t => t && t.uid !== state.userId);
+                const pick = opponents[Math.floor(Math.random() * opponents.length)];
+                if (pick) challengeTrainer(pick.uid);
+            }, 700);
+        };
+
+        function startBattle(config) {
+            state.inBattle = true;
+            Object.keys(moveInputs).forEach(k => moveInputs[k] = false);
+            AudioEngine.sfxEncounter();
+
+            const flash = document.getElementById('battle-flash');
+            if (flash) {
+                flash.classList.remove('hidden');
+                setTimeout(() => flash.classList.add('hidden'), 260);
+            }
+
+            state.battle = {
+                isPvP: config.isPvP,
+                opponentName: config.opponentName,
+                enemyParty: config.enemyParty,
+                enemyIndex: 0,
+                busy: false
+            };
+
+            const modeLabel = document.getElementById('screen-mode-label');
+            const battleModeTag = document.getElementById('battle-mode-tag');
+            const battleScreen = document.getElementById('battle-screen');
+
+            if (modeLabel) {
+                modeLabel.textContent = config.isPvP
+                    ? `PVP ARENA // VS ${config.opponentName.toUpperCase()}`
+                    : 'WILD ENCOUNTER // TALL GRASS';
+            }
+            if (battleModeTag) {
+                battleModeTag.textContent = config.isPvP
+                    ? `PVP: ${config.opponentName}`
+                    : 'WILD ENCOUNTER';
+            }
+
+            if (battleScreen) battleScreen.classList.remove('hidden');
+            resetBattleMenu();
+            renderBattleState();
+            setBattleLog(config.isPvP
+                ? `Trainer ${config.opponentName} sent out ${config.enemyParty[0].name}!`
+                : `A wild ${config.enemyParty[0].name} (Lv.${config.enemyParty[0].level}) appeared!`);
+            syncTrainerPresence('In Battle');
+        }
+
+        function renderBattleState() {
+            const playerMon = getFirstHealthyMonster();
+            if (!playerMon && state.party.length > 0) state.party[0];
+            if (!playerMon) return;
+            
+            const enemyMon = state.battle && state.battle.enemyParty ? state.battle.enemyParty[state.battle.enemyIndex] : null;
+            if (!enemyMon) return;
+
+            const enemyName = document.getElementById('enemy-name');
+            const enemyLvl = document.getElementById('enemy-lvl');
+            const enemyTypeBadge = document.getElementById('enemy-type-badge');
+            const enemyHpText = document.getElementById('enemy-hp-text');
+            const enemyHpBar = document.getElementById('enemy-hp-bar');
+            const enemySpriteBox = document.getElementById('enemy-sprite-box');
+
+            if (enemyName) enemyName.textContent = enemyMon.name;
+            if (enemyLvl) enemyLvl.textContent = enemyMon.level;
+            if (enemyTypeBadge) enemyTypeBadge.textContent = enemyMon.type;
+            if (enemyHpText) enemyHpText.textContent = `${Math.max(0, enemyMon.hp)}/${enemyMon.maxHp}`;
+            if (enemyHpBar) {
+                const ePct = Math.max(0, (enemyMon.hp / enemyMon.maxHp) * 100);
+                enemyHpBar.style.width = `${ePct}%`;
+                enemyHpBar.className = `h-full transition-all duration-300 ${ePct > 50 ? 'bg-emerald-400' : ePct > 20 ? 'bg-amber-400' : 'bg-red-500'}`;
+            }
+            if (enemySpriteBox) enemySpriteBox.innerHTML = getMonsterSVG(enemyMon.speciesId, false);
+
+            const playerMonName = document.getElementById('player-mon-name');
+            const playerMonLvl = document.getElementById('player-mon-lvl');
+            const playerTypeBadge = document.getElementById('player-type-badge');
+            const playerHpText = document.getElementById('player-hp-text');
+            const playerHpBar = document.getElementById('player-hp-bar');
+            const playerXpBar = document.getElementById('player-xp-bar');
+            const playerSpriteBox = document.getElementById('player-sprite-box');
+
+            if (playerMonName) playerMonName.textContent = playerMon.name;
+            if (playerMonLvl) playerMonLvl.textContent = playerMon.level;
+            if (playerTypeBadge) playerTypeBadge.textContent = playerMon.type;
+            if (playerHpText) playerHpText.textContent = `${Math.max(0, playerMon.hp)}/${playerMon.maxHp}`;
+            if (playerHpBar) {
+                const pPct = Math.max(0, (playerMon.hp / playerMon.maxHp) * 100);
+                playerHpBar.style.width = `${pPct}%`;
+                playerHpBar.className = `h-full transition-all duration-300 ${pPct > 50 ? 'bg-emerald-400' : pPct > 20 ? 'bg-amber-400' : 'bg-red-500'}`;
+            }
+            if (playerXpBar) {
+                playerXpBar.style.width = `${Math.min(100, ((playerMon.xp || 0) / playerMon.nextXp) * 100)}%`;
+            }
+            if (playerSpriteBox) playerSpriteBox.innerHTML = getMonsterSVG(playerMon.speciesId, true);
+        }
+
+        function setBattleLog(msg) {
+            const logText = document.getElementById('battle-log-text');
+            if (logText) logText.textContent = msg;
+        }
+
+        window.resetBattleMenu = function() {
+            const bMain = document.getElementById('battle-actions-main');
+            const bMoves = document.getElementById('battle-actions-moves');
+            const bBag = document.getElementById('battle-actions-bag');
+            if (bMain) bMain.classList.remove('hidden');
+            if (bMoves) bMoves.classList.add('hidden');
+            if (bBag) bBag.classList.add('hidden');
+        };
+
+        window.showBattleMoves = function() {
+            if (!state.battle || state.battle.busy) return;
+            const playerMon = getFirstHealthyMonster();
+            if (!playerMon) return;
+            const movesDiv = document.getElementById('battle-actions-moves');
+            if (!movesDiv) return;
+            movesDiv.innerHTML = playerMon.moves.map((m, idx) => `
+                <button type="button" onclick="executePlayerMove(${idx})" class="btn-3d bg-slate-800 hover:bg-slate-700 border border-slate-600 p-1.5 rounded-lg text-left text-xs">
+                    <div class="font-bold text-white truncate">${escapeHTML(m.name)}</div>
+                    <div class="flex justify-between text-[10px] text-slate-400">
+                        <span class="uppercase text-amber-400">${escapeHTML(m.type)}</span>
+                        <span>PWR ${m.power} | PP ${m.currentPp}/${m.pp}</span>
+                    </div>
+                </button>
+            `).join('') + `
+                <button type="button" onclick="resetBattleMenu()" class="col-span-2 bg-slate-700 hover:bg-slate-600 py-1 rounded text-[11px] font-bold">↩ Back</button>
+            `;
+            const bMain = document.getElementById('battle-actions-main');
+            if (bMain) bMain.classList.add('hidden');
+            movesDiv.classList.remove('hidden');
+        };
+
+        window.showBattleBag = function() {
+            if (!state.battle || state.battle.busy) return;
+            updateHUD();
+            const bMain = document.getElementById('battle-actions-main');
+            const bBag = document.getElementById('battle-actions-bag');
+            if (bMain) bMain.classList.add('hidden');
+            if (bBag) bBag.classList.remove('hidden');
+        };
+
+        window.showBattleParty = function() {
+            if (!state.battle || state.battle.busy) return;
+            const body = document.getElementById('modal-generic-body');
+            const title = document.getElementById('modal-generic-title');
+            if (!body || !title) return;
+            title.textContent = 'Switch Active Monster';
+            body.innerHTML = state.party.map((m, i) => `
+                <button type="button" onclick="switchMonsterInBattle(${i})" class="w-full bg-slate-950 border ${i === 0 ? 'border-amber-400' : 'border-slate-800'} p-2.5 rounded-xl flex items-center justify-between hover:border-sky-400">
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10">${getMonsterSVG(m.speciesId)}</div>
+                        <div class="text-left">
+                            <div class="font-bold text-white">${escapeHTML(m.name)} (Lv.${m.level})</div>
+                            <div class="text-slate-400">HP: ${m.hp}/${m.maxHp}</div>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold text-emerald-400">${i === 0 ? 'ACTIVE' : m.hp > 0 ? 'SELECT' : 'FAINTED'}</span>
+                </button>
+            `).join('');
+            openModal('modal-generic');
+        };
+
+        window.switchMonsterInBattle = function(idx) {
+            closeModal('modal-generic');
+            if (!state.battle || state.battle.busy) return;
+            if (idx === 0 || !state.party[idx] || state.party[idx].hp <= 0) return;
+            const chosen = state.party.splice(idx, 1)[0];
+            state.party.unshift(chosen);
+            updateHUD();
+            renderBattleState();
+            setBattleLog(`Go! ${chosen.name}!`);
+            state.battle.busy = true;
+            setTimeout(() => enemyTurn(), 900);
+        };
+
+        function calculateDamage(attacker, defender, move) {
+            const eff = (TYPE_CHART[move.type] && TYPE_CHART[move.type][defender.type]) || 1;
+            const raw = (((2 * attacker.level / 5 + 2) * move.power * (attacker.atk / defender.def)) / 18) + 2;
+            const variance = 0.85 + Math.random() * 0.3;
+            return { dmg: Math.max(1, Math.floor(raw * eff * variance)), eff };
+        }
+
+        window.executePlayerMove = function(moveIdx) {
+            if (!state.battle || state.battle.busy) return;
+            const playerMon = getFirstHealthyMonster();
+            if (!playerMon) return;
+            const move = playerMon.moves ? playerMon.moves[moveIdx] : null;
+            if (!move || move.currentPp <= 0) {
+                showToast(move && move.currentPp <= 0 ? 'Not enough PP!' : 'Invalid move!');
+                return;
+            }
+            move.currentPp--;
+
+            state.battle.busy = true;
+            resetBattleMenu();
+
+            const enemyMon = state.battle.enemyParty[state.battle.enemyIndex];
+
+            const pBox = document.getElementById('player-sprite-box');
+            const eBox = document.getElementById('enemy-sprite-box');
+            if (pBox) pBox.classList.add('anim-lunge-player');
+            AudioEngine.sfxHit();
+
+            setTimeout(() => {
+                if (pBox) pBox.classList.remove('anim-lunge-player');
+                if (eBox) {
+                    eBox.classList.add('anim-hit');
+                    setTimeout(() => eBox.classList.remove('anim-hit'), 400);
+                }
+
+                const { dmg, eff } = calculateDamage(playerMon, enemyMon, move);
+                enemyMon.hp = Math.max(0, enemyMon.hp - dmg);
+                renderBattleState();
+
+                let note = eff > 1 ? " It's super effective!" : eff < 1 ? " It's not very effective..." : "";
+                setBattleLog(`${playerMon.name} used ${move.name}! (-${dmg} HP)${note}`);
+
+                if (enemyMon.hp <= 0) {
+                    setTimeout(() => handleEnemyFainted(), 1000);
+                } else {
+                    setTimeout(() => enemyTurn(), 1100);
+                }
+            }, 300);
+        };
+
+        function enemyTurn() {
+            if (!state.battle || !state.battle.enemyParty) return;
+            const playerMon = getFirstHealthyMonster();
+            const enemyMon = state.battle.enemyParty[state.battle.enemyIndex];
+            if (!playerMon || !enemyMon || enemyMon.hp <= 0) {
+                state.battle.busy = false;
+                return;
+            }
+
+            const move = enemyMon.moves[Math.floor(Math.random() * enemyMon.moves.length)];
+            const eBox = document.getElementById('enemy-sprite-box');
+            const pBox = document.getElementById('player-sprite-box');
+            if (eBox) eBox.classList.add('anim-lunge-enemy');
+            AudioEngine.sfxHit();
+
+            setTimeout(() => {
+                if (eBox) eBox.classList.remove('anim-lunge-enemy');
+                if (pBox) {
+                    pBox.classList.add('anim-hit');
+                    setTimeout(() => pBox.classList.remove('anim-hit'), 400);
+                }
+
+                const { dmg, eff } = calculateDamage(enemyMon, playerMon, move);
+                playerMon.hp = Math.max(0, playerMon.hp - dmg);
+                renderBattleState();
+                updateHUD();
+
+                let note = eff > 1 ? " Super effective!" : "";
+                setBattleLog(`${enemyMon.name} used ${move.name}! (-${dmg} HP)${note}`);
+
+                if (playerMon.hp <= 0) {
+                    const nextHealthy = getFirstHealthyMonster();
+                    if (nextHealthy) {
+                        const idx = state.party.indexOf(nextHealthy);
+                        state.party.splice(idx, 1);
+                        state.party.unshift(nextHealthy);
+                        setTimeout(() => {
+                            renderBattleState();
+                            updateHUD();
+                            setBattleLog(`${playerMon.name} fainted! Sent out ${nextHealthy.name}!`);
+                            state.battle.busy = false;
+                        }, 1100);
+                    } else {
+                        setTimeout(() => {
+                            setBattleLog('All your monsters fainted! Rushing to PokeCenter...');
+                            setTimeout(() => {
+                                healAllParty(false);
+                                endBattle();
+                            }, 1200);
+                        }, 1000);
+                    }
+                } else {
+                    state.battle.busy = false;
+                }
+            }, 300);
+        }
+
+        function handleEnemyFainted() {
+            if (!state.battle || !state.battle.enemyParty) return;
+            const playerMon = getFirstHealthyMonster();
+            if (!playerMon) return;
+            const enemyMon = state.battle.enemyParty[state.battle.enemyIndex];
+            const gainedXp = enemyMon.level * 18;
+            playerMon.xp = (playerMon.xp || 0) + gainedXp;
+
+            let lvlMsg = '';
+            if (playerMon.xp >= playerMon.nextXp) {
+                playerMon.level++;
+                playerMon.xp -= playerMon.nextXp;
+                playerMon.nextXp = playerMon.level * 30;
+                playerMon.maxHp += 5;
+                playerMon.hp = playerMon.maxHp;
+                playerMon.atk += 2;
+                playerMon.def += 2;
+                lvlMsg = ` ${playerMon.name} grew to Lv.${playerMon.level}!`;
+                AudioEngine.sfxHeal();
+            }
+
+            if (state.battle.enemyIndex + 1 < state.battle.enemyParty.length) {
+                state.battle.enemyIndex++;
+                const nextEnemy = state.battle.enemyParty[state.battle.enemyIndex];
+                setBattleLog(`${enemyMon.name} fainted! +${gainedXp} XP.${lvlMsg} Opponent sent out ${nextEnemy.name}!`);
+                renderBattleState();
+                updateHUD();
+                state.battle.busy = false;
+                return;
+            }
+
+            const prize = state.battle.isPvP ? 250 : 80;
+            state.money += prize;
+            if (state.battle.isPvP) {
+                state.wins++;
+                logServer(`PvP Victory! ${state.trainerName} defeated ${state.battle.opponentName}.`);
+            }
+            setBattleLog(`Victory! +${gainedXp} XP & +$${prize}!${lvlMsg}`);
+            updateHUD();
+            setTimeout(() => endBattle(), 1600);
+        }
+
+        window.useBagItem = function(itemType) {
+            if (!state.battle || state.battle.busy) return;
+            const playerMon = getFirstHealthyMonster();
+            if (!playerMon) return;
+            const enemyMon = state.battle.enemyParty[state.battle.enemyIndex];
+
+            if (itemType === 'potion') {
+                if (state.bag.potion <= 0) { showToast('No Potions left!'); return; }
+                state.bag.potion--;
+                playerMon.hp = Math.min(playerMon.maxHp, playerMon.hp + 25);
+                AudioEngine.sfxHeal();
+                resetBattleMenu();
+                renderBattleState();
+                updateHUD();
+                setBattleLog(`Used Potion! ${playerMon.name} recovered 25 HP.`);
+                state.battle.busy = true;
+                setTimeout(() => enemyTurn(), 1000);
+                return;
+            }
+
+            if (itemType === 'orb' || itemType === 'superorb') {
+                if (state.battle.isPvP) {
+                    showToast("You can't capture another Trainer's monster!");
+                    return;
+                }
+                if (state.bag[itemType] <= 0) { showToast('No Orbs left!'); return; }
+                state.bag[itemType]--;
+                updateHUD();
+                resetBattleMenu();
+                state.battle.busy = true;
+
+                const orbAnim = document.getElementById('capture-orb-anim');
+                const enemySprite = document.getElementById('enemy-sprite-box');
+                if (enemySprite) enemySprite.classList.add('opacity-20', 'scale-50', 'transition-all');
+                if (orbAnim) orbAnim.classList.remove('hidden');
+                setBattleLog(`You threw a ${itemType === 'superorb' ? 'Ultra Orb' : 'Capture Orb'}...`);
+
+                const hpFactor = (enemyMon.maxHp - enemyMon.hp * 0.65) / enemyMon.maxHp;
+                const bonus = itemType === 'superorb' ? 0.35 : 0.15;
+                const catchChance = Math.min(0.95, Math.max(0.25, hpFactor + bonus));
+
+                setTimeout(() => {
+                    if (orbAnim) orbAnim.classList.add('hidden');
+                    if (enemySprite) enemySprite.classList.remove('opacity-20', 'scale-50');
+                    if (Math.random() < catchChance) {
+                        AudioEngine.sfxCatch();
+                        state.caughtCount++;
+                        if (state.party.length < 6) {
+                            state.party.push(enemyMon);
+                            setBattleLog(`Gotcha! ${enemyMon.name} joined your squad!`);
+                        } else {
+                            state.money += 120;
+                            setBattleLog(`Gotcha! Squad full, transferred ${enemyMon.name} for +$120!`);
+                        }
+                        logServer(`${state.trainerName} captured a wild ${enemyMon.name}!`);
+                        updateHUD();
+                        setTimeout(() => endBattle(), 1500);
+                    } else {
+                        setBattleLog(`Oh no! ${enemyMon.name} broke free!`);
+                        setTimeout(() => enemyTurn(), 1000);
+                    }
+                }, 1200);
+            }
+        };
+
+        window.attemptRun = function() {
+            if (!state.battle || state.battle.busy) return;
+            if (state.battle.isPvP) {
+                showToast("Cannot flee from a Ranked PvP Battle!");
+                return;
+            }
+            setBattleLog('Got away safely!');
+            setTimeout(() => endBattle(), 650);
+        };
+
+        function endBattle() {
+            state.inBattle = false;
+            state.battle = null;
+            const battleScreen = document.getElementById('battle-screen');
+            const modeLabel = document.getElementById('screen-mode-label');
+            if (battleScreen) battleScreen.classList.add('hidden');
+            if (modeLabel) modeLabel.textContent = 'OVERWORLD // PALLET VALLEY';
+            updateHUD();
+            syncTrainerPresence('Exploring');
+        }
+
+        // ==========================================
+        // 8. HEALING CENTER, POKEMART & MODALS
+        // ==========================================
+        window.healAllParty = function(notify = true) {
+            if (!Array.isArray(state.party)) return;
+            state.party.forEach(m => {
+                if (!m) return;
+                m.hp = m.maxHp;
+                if (Array.isArray(m.moves)) {
+                    m.moves.forEach(mv => { if (mv) mv.currentPp = mv.pp; });
+                }
+            });
+            updateHUD();
+            if (notify) {
+                AudioEngine.sfxHeal();
+                showToast('🏥 All squad monsters restored to full HP!');
+            }
+        };
+
+        window.openShopModal = function() {
+            const titleEl = document.getElementById('modal-generic-title');
+            const bodyEl = document.getElementById('modal-generic-body');
+            if (!titleEl || !bodyEl) return;
+            titleEl.textContent = `🏪 PokeMart (Balance: $${state.money})`;
+            bodyEl.innerHTML = `
+                <div class="space-y-2">
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white">🧪 Potion (+25 HP)</div>
+                            <div class="text-slate-400">Owned: ${state.bag.potion}</div>
+                        </div>
+                        <button type="button" onclick="buyItem('potion', 100)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg">Buy $100</button>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white">🔴 Capture Orb</div>
+                            <div class="text-slate-400">Owned: ${state.bag.orb}</div>
+                        </div>
+                        <button type="button" onclick="buyItem('orb', 120)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg">Buy $120</button>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-white">🟣 Ultra Orb (2x Catch)</div>
+                            <div class="text-slate-400">Owned: ${state.bag.superorb}</div>
+                        </div>
+                        <button type="button" onclick="buyItem('superorb', 250)" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg">Buy $250</button>
+                    </div>
+                </div>
+            `;
+            openModal('modal-generic');
+        };
+
+        window.buyItem = function(item, cost) {
+            if (state.money < cost) {
+                showToast('Not enough PokeDollars!');
+                return;
+            }
+            state.money -= cost;
+            state.bag[item]++;
+            AudioEngine.playTone(660, 'sine', 0.1);
+            updateHUD();
+            openShopModal();
+            showToast(`Purchased ${item.toUpperCase()}!`);
+        };
+
+        window.openModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        };
+        window.closeModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        };
+
+        // ==========================================
+        // 9. DELTA-TIME GAME LOOP & INITIALIZATION
+        // ==========================================
+        let lastTime = performance.now();
+        function gameLoop(currentTime) {
+            const dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            moveAccumulator += dt;
+            while (moveAccumulator >= MOVEMENT_INTERVAL) {
+                stepOverworld();
+                moveAccumulator -= MOVEMENT_INTERVAL;
+            }
+            drawOverworld();
+            requestAnimationFrame(gameLoop);
+        }
+
+        setInterval(() => {
+            const ping = 18 + Math.floor(Math.random() * 19);
+            const pingEl = document.getElementById('server-ping');
+            if (pingEl) pingEl.textContent = `${ping}ms`;
+        }, 3000);
+
+        setInterval(() => {
+            renderLobbyAndLeaderboard();
+        }, 15000);
+
+        // Immediate direct execution (No window.onload blocking)
+        const initPreview = (id) => {
+            const el = document.getElementById(`preview-${id}`);
+            if (el) el.innerHTML = getMonsterSVG(id);
+        };
+        initPreview('embercub');
+        initPreview('aquafin');
+        initPreview('leafsprout');
+
+        state.party = [createMonsterInstance('embercub', 5)];
+        updateHUD();
+        initMultiplayerBackend();
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
