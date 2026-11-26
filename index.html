@@ -199,6 +199,86 @@
   </style>
 </head>
 <body>
+  <div class="app">
+    <div class="topbar">
+      <span class="status-pill"><span class="dot"></span> ARENA ONLINE</span>
+      <div class="top-controls">
+        <span id="streak-display" style="font-weight: 800; color: #fbbf24;">WINS: 0</span>
+        <button id="sound-toggle" class="sound-btn">SFX: ON</button>
+      </div>
+    </div>
+
+    <div id="title-screen" class="screen active">
+      <div class="hero">
+        <h1>POKEVERSE</h1>
+        <p>Real-time ATB monster combat, parries &amp; elemental combos</p>
+      </div>
+      <div class="section-label">Choose Your Starter</div>
+      <div id="starter-grid" class="starter-grid"></div>
+      <div class="lobby-box">
+        <span style="font-size: 0.82rem; color: var(--muted); font-weight: 700;">MODE</span>
+        <span style="font-size: 0.85rem; font-weight: 800; color: var(--accent);">ENDLESS GAUNTLET</span>
+      </div>
+      <button id="start-btn" class="btn-primary">Enter Arena</button>
+    </div>
+
+    <div id="battle-screen" class="screen">
+      <div class="hud-card">
+        <div class="hud-header">
+          <div class="mon-title">
+            <span id="enemy-name">Enemy</span>
+            <span id="enemy-type" class="type-badge">TYPE</span>
+            <span id="enemy-lv" class="lv-tag">Lv. 5</span>
+          </div>
+          <div id="enemy-statuses" class="status-tags"></div>
+        </div>
+        <div class="bar-wrap"><div id="enemy-hp-bar" class="bar-fill"></div></div>
+        <div class="energy-wrap"><div id="enemy-en-bar" class="energy-fill"></div></div>
+        <div class="hp-numbers">
+          <span>HP</span>
+          <span id="enemy-hp-text">100 / 100</span>
+        </div>
+      </div>
+
+      <div class="arena-wrap">
+        <div id="combo-badge" class="combo-badge">2x COMBO</div>
+        <canvas id="arena-canvas" width="464" height="230"></canvas>
+      </div>
+
+      <div class="hud-card">
+        <div class="hud-header">
+          <div class="mon-title">
+            <span id="player-name">Player</span>
+            <span id="player-type" class="type-badge">TYPE</span>
+            <span id="player-lv" class="lv-tag">Lv. 5</span>
+          </div>
+          <div id="player-statuses" class="status-tags"></div>
+        </div>
+        <div class="bar-wrap"><div id="player-hp-bar" class="bar-fill"></div></div>
+        <div class="energy-wrap"><div id="player-en-bar" class="energy-fill"></div></div>
+        <div class="hp-numbers">
+          <span>EN: <strong id="player-en-text" style="color: var(--accent);">0%</strong></span>
+          <span id="player-hp-text">100 / 100</span>
+        </div>
+      </div>
+
+      <div id="battle-log" class="battle-log">Preparing combat telemetry...</div>
+
+      <div id="moves-grid" class="moves-grid"></div>
+      <button id="guard-btn" class="guard-btn">
+        <span>AEGIS GUARD (PARRY)</span>
+        <span>25 EN</span>
+      </button>
+    </div>
+
+    <div id="result-overlay" class="overlay">
+      <h2 id="result-title">VICTORY</h2>
+      <p id="result-desc">Match complete.</p>
+      <button id="rematch-btn" class="btn-primary">Next Match</button>
+    </div>
+  </div>
+
+  <script>
     // --- PROCEDURAL WEB AUDIO ENGINE ---
     let audioCtx = null;
     let soundEnabled = true;
@@ -322,6 +402,7 @@
       WATER: { FIRE: 1.3, EARTH: 1.15, VOLT: 0.75, WATER: 1.0 },
       NORMAL:{ FIRE: 1.0, WATER: 1.0, VOLT: 1.0, EARTH: 1.0 }
     };
+
     let selectedStarterIdx = 0;
     let wins = 0;
     let state = {
@@ -346,8 +427,106 @@
     const titleScreen = document.getElementById('title-screen');
     const battleScreen = document.getElementById('battle-screen');
     const resultOverlay = document.getElementById('result-overlay');
+    const battleLog = document.getElementById('battle-log');
     const canvas = document.getElementById('arena-canvas');
     const ctx = canvas.getContext('2d');
+
+    function setLog(html) {
+      battleLog.innerHTML = html;
+    }
+
+    function createCombatant(template, level, isPlayer) {
+      const scale = 1 + (level - 5) * 0.08;
+      const maxHp = Math.round(template.maxHp * scale);
+      return {
+        ...template,
+        level,
+        maxHp,
+        hp: maxHp,
+        atk: Math.round(template.atk * scale),
+        def: Math.round(template.def * scale),
+        energy: isPlayer ? 40 : 25,
+        baseX: isPlayer ? 115 : canvas.width - 115,
+        baseY: 112,
+        lunge: 0,
+        scale: 1,
+        guardTimer: 0,
+        hurtTimer: 0,
+        attackAnim: 0,
+        flash: 0,
+        dotTick: 0,
+        statuses: { BURN: 0, SOAK: 0, SHOCK: 0, SHATTER: 0 },
+        moves: template.moves.map(m => ({ ...m }))
+      };
+    }
+
+    function applyStatus(mon, status) {
+      if (!mon.statuses || !(status in mon.statuses)) return false;
+      mon.statuses[status] = 4.5;
+      playSfx('status');
+      spawnFloatText(mon.baseX, mon.baseY - 56, status, '#fbbf24', false);
+      return true;
+    }
+
+    function triggerFlash(mon, duration = 0.2) {
+      mon.flash = duration;
+    }
+
+    function triggerShake(amount) {
+      state.screenShake = Math.max(state.screenShake, amount);
+    }
+
+    function spawnParticles(x, y, color, count = 18, burst = false) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = (burst ? 1.8 : 0.8) + Math.random() * (burst ? 4.2 : 2.2);
+        state.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 2 + Math.random() * 3.5,
+          color,
+          life: 0,
+          maxLife: 0.35 + Math.random() * 0.35
+        });
+      }
+    }
+
+    function spawnShockwave(x, y, color, maxRadius = 70) {
+      state.shockwaves.push({
+        x,
+        y,
+        radius: 10,
+        maxRadius,
+        color,
+        life: 1.0
+      });
+    }
+
+    function spawnBeam(x1, y1, x2, y2, color, width = 14) {
+      state.beams.push({
+        x1,
+        y1,
+        x2,
+        y2,
+        color,
+        width,
+        life: 1.0
+      });
+    }
+
+    function spawnFloatText(x, y, text, color, isCrit = false) {
+      state.floatTexts.push({
+        x,
+        y,
+        vy: -1.4,
+        text,
+        color,
+        scale: isCrit ? 1.25 : 1.0,
+        life: 1.0
+      });
+    }
 
     function renderStarters() {
       starterGrid.innerHTML = '';
@@ -363,6 +542,7 @@
         starterGrid.appendChild(card);
       });
     }
+
     function initAmbientArena() {
       const themes = ['FIRE', 'WATER', 'VOLT', 'EARTH'];
       state.arenaTheme = themes[Math.floor(Math.random() * themes.length)];
@@ -451,116 +631,6 @@
     };
 
     function executeMove(attacker, defender, move, isPlayer) {
-      if (!state.active || attacker.energy < move.cost) return;
-      attacker.energy -= move.cost;
-      attacker.lunge = isPlayer ? 56 : -56;
-      attacker.attackAnim = 0.35;
-      attacker.scale = 1.16;
-
-      for (let step = 1; step <= 3; step++) {
-        state.afterimages.push({
-          mon: attacker,
-          x: attacker.baseX + (attacker.lunge * (step / 4)),
-          y: attacker.baseY,
-          isPlayer,
-          alpha: 0.35 - step * 0.08
-        });
-      }
-
-      if (move.type === 'HEAL') {
-        const healed = Math.min(attacker.maxHp - attacker.hp, move.heal);
-        attacker.hp += healed;
-        triggerFlash(attacker, 0.25);
-        playSfx('heal');
-        spawnShockwave(attacker.baseX, attacker.baseY, '#22c55e', 65);
-        spawnParticles(attacker.baseX, attacker.baseY, '#22c55e', 22);
-        spawnFloatText(attacker.baseX, attacker.baseY - 34, `+${healed} HP`, '#4ade80');
-        setLog(`<strong>${attacker.name}</strong> used ${move.name} and restored <strong>${healed} HP</strong>!`);
-      } else {
-        if (defender.guardTimer > 0) {
-          defender.guardTimer = 0;
-          defender.energy = Math.min(100, defender.energy + 18);
-          playSfx('parry');
-          triggerShake(14);
-          state.hitStop = 0.05;
-          spawnShockwave(defender.baseX, defender.baseY, '#38bdf8', 95);
-          spawnParticles(defender.baseX, defender.baseY, '#38bdf8', 30, true);
-          const blockedDmg = Math.max(2, Math.round(move.power * 0.15));
-          defender.hp = Math.max(0, defender.hp - blockedDmg);
-          spawnFloatText(defender.baseX, defender.baseY - 40, `PARRIED! -${blockedDmg}`, '#38bdf8', true);
-          setLog(`<strong>${defender.name}</strong> PARRIED ${move.name} with Aegis Guard (+18 EN)!`);
-          updateHud();
-          checkBattleEnd();
-          return;
-        }
-
-        let comboMult = 1.0;
-        if (isPlayer) {
-          state.combo++;
-          state.comboTimer = 4.2;
-          comboMult = 1 + Math.min(5, state.combo - 1) * 0.1;
-        } else {
-          state.combo = 0;
-          state.comboTimer = 0;
-        }
-
-        let mult = TYPE_CHART[move.type]?.[defender.type] || 1.0;
-        if (defender.statuses.SOAK > 0 && move.type === 'VOLT') mult *= 1.25;
-
-        const atkStat = attacker.statuses.BURN > 0 ? attacker.atk * 0.85 : attacker.atk;
-        const defStat = defender.statuses.SHATTER > 0 ? defender.def * 0.72 : defender.def;
-
-        const isCrit = Math.random() < 0.24;
-        const critMult = isCrit ? 1.5 : 1.0;
-        const raw = ((atkStat / Math.max(8, defStat)) * move.power * 0.72) * mult * critMult * comboMult * (0.92 + Math.random() * 0.16);
-        const dmg = Math.max(8, Math.round(raw));
-
-        defender.hp = Math.max(0, defender.hp - dmg);
-        defender.hurtTimer = 0.35;
-        defender.scale = 0.84;
-        triggerFlash(defender, 0.24);
-
-        if (move.type !== 'NORMAL') {
-          playSfx('beam');
-          spawnBeam(attacker.baseX, attacker.baseY, defender.baseX, defender.baseY, attacker.color, move.power > 50 ? 22 : 12);
-        }
-
-        const pitch = 1 + Math.min(5, state.combo) * 0.08;
-        playSfx(isCrit || move.power > 50 ? 'crit' : 'hit', pitch);
-
-        if (isCrit || move.power > 50) {
-          state.hitStop = 0.055;
-          triggerShake(24);
-          spawnShockwave(defender.baseX, defender.baseY, isCrit ? '#ef4444' : attacker.color, 105);
-        } else {
-          triggerShake(10);
-          spawnShockwave(defender.baseX, defender.baseY, attacker.color, 60);
-        }
-
-        spawnParticles(defender.baseX, defender.baseY, attacker.color, isCrit ? 38 : 22, true);
-        spawnFloatText(
-          defender.baseX,
-          defender.baseY - 38,
-          `${isCrit ? 'CRIT! -' : '-'}${dmg}`,
-          isCrit ? '#ef4444' : '#fca5a5',
-          isCrit
-        );
-
-        let statusMsg = '';
-        if (move.status && Math.random() < move.chance) {
-          if (applyStatus(defender, move.status)) {
-            statusMsg = ` [${move.status}]`;
-          }
-        }
-
-        const effText = mult > 1.05 ? ' Super effective!' : mult < 0.95 ? ' Resisted...' : '';
-        setLog(`<strong>${attacker.name}</strong> unleashed ${move.name} for <strong>${dmg} DMG</strong>!${effText}${statusMsg}`);
-      }
-
-      updateHud();
-      checkBattleEnd();
-    }
-        function executeMove(attacker, defender, move, isPlayer) {
       if (!state.active || attacker.energy < move.cost) return;
       attacker.energy -= move.cost;
       attacker.lunge = isPlayer ? 56 : -56;
@@ -771,6 +841,7 @@
 
     function updateEnemyAI() {
       const e = state.enemy;
+      if (e.statuses.SHOCK > 0) return;
       const avail = e.moves.filter(m => e.energy >= m.cost);
       if (avail.length === 0) return;
 
