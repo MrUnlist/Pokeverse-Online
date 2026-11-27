@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Pokeverse-Online | Apex Hardcore Edition</title>
+  <title>Pokeverse-Online | Apex Hardcore Edition (Expanded Roster)</title>
   <style>
     :root {
       --bg: #070a12;
@@ -29,7 +29,7 @@
 
     .app {
       width: 100%;
-      max-width: 500px;
+      max-width: 520px;
       background: var(--panel);
       border: 2px solid var(--panel-border);
       border-radius: 16px;
@@ -67,38 +67,51 @@
     .screen { display: none; padding: 16px; }
     .screen.active { display: block; }
 
-    .hero { text-align: center; padding: 10px 0 16px; }
+    .hero { text-align: center; padding: 8px 0 14px; }
     .hero h1 {
-      font-size: 1.9rem;
+      font-size: 1.85rem;
       letter-spacing: 2px;
       background: linear-gradient(90deg, #f43f5e, #a855f7, #38bdf8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-weight: 900;
     }
-    .hero p { color: var(--muted); font-size: 0.85rem; }
+    .hero p { color: var(--muted); font-size: 0.82rem; }
 
     .section-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; font-weight: 800; text-align: center; }
-    .starter-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .starter-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+      max-height: 270px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .starter-grid::-webkit-scrollbar { width: 6px; }
+    .starter-grid::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+
     .starter-card {
       background: #090d16;
       border: 2px solid var(--panel-border);
       border-radius: 12px;
-      padding: 12px 10px;
+      padding: 10px 8px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.18s ease;
+      transition: all 0.16s ease;
     }
-    .starter-card.selected { border-color: var(--accent); box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-2px); background: #0f172a; }
-    .starter-icon { width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
-    .starter-name { font-weight: 800; font-size: 0.92rem; margin-bottom: 4px; }
+    .starter-card.selected { border-color: var(--accent); box-shadow: 0 0 16px var(--accent-glow); transform: translateY(-2px); background: #0f172a; }
+    .starter-icon { width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.65); }
+    .starter-name { font-weight: 800; font-size: 0.86rem; margin-bottom: 3px; }
 
-    .type-badge { display: inline-block; font-size: 0.66rem; padding: 2px 8px; border-radius: 999px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .type-badge { display: inline-block; font-size: 0.62rem; padding: 2px 7px; border-radius: 999px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
     .type-FIRE { background: #7c2d12; color: #fdba74; border: 1px solid #ea580c; }
     .type-WATER { background: #1e3a8a; color: #93c5fd; border: 1px solid #2563eb; }
     .type-VOLT { background: #713f12; color: #fef08a; border: 1px solid #eab308; }
     .type-EARTH { background: #14532d; color: #86efac; border: 1px solid #22c55e; }
+    .type-MYTHIC { background: #4c1d95; color: #f5d0fe; border: 1px solid #c084fc; }
+    .type-SHADOW { background: #1e1b4b; color: #c4b5fd; border: 1px solid #6366f1; }
 
     .status-tags { display: flex; gap: 4px; align-items: center; }
     .ailment-pill {
@@ -115,15 +128,15 @@
     .ailment-SHATTER { background: #16a34a; color: #fff; }
     .ailment-GUARD { background: #38bdf8; color: #090d16; animation: none; }
 
-    .lobby-box { background: #090d16; border: 2px solid var(--panel-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .lobby-box { background: #090d16; border: 2px solid var(--panel-border); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
     .btn-primary {
       width: 100%;
-      padding: 14px;
+      padding: 13px;
       border: none;
       border-radius: 12px;
       background: linear-gradient(135deg, #f43f5e, #4f46e5);
       color: #fff;
-      font-size: 1.05rem;
+      font-size: 1rem;
       font-weight: 900;
       letter-spacing: 1px;
       cursor: pointer;
@@ -211,9 +224,9 @@
     <div id="title-screen" class="screen active">
       <div class="hero">
         <h1>POKEVERSE</h1>
-        <p>Real-time ATB monster combat, parries &amp; elemental combos</p>
+        <p>Mythic &amp; Legendary roster + real-time ATB combat</p>
       </div>
-      <div class="section-label">Choose Your Starter</div>
+      <div class="section-label">Select Your Fighter (16 Roster)</div>
       <div id="starter-grid" class="starter-grid"></div>
       <div class="lobby-box">
         <span style="font-size: 0.82rem; color: var(--muted); font-weight: 700;">MODE</span>
@@ -242,7 +255,7 @@
 
       <div class="arena-wrap">
         <div id="combo-badge" class="combo-badge">2x COMBO</div>
-        <canvas id="arena-canvas" width="464" height="230"></canvas>
+        <canvas id="arena-canvas" width="484" height="230"></canvas>
       </div>
 
       <div class="hud-card">
@@ -367,7 +380,7 @@
       if (soundEnabled) initAudio();
     };
 
-    // --- MONSTER & COMBAT DATA ---
+    // --- EXPANDED MONSTER & COMBAT DATA ---
     const MONSTERS = [
       { id: 'pyrodrake', name: 'Pyrodrake', type: 'FIRE', color: '#ea580c', accent: '#fed7aa', maxHp: 125, atk: 27, def: 12, moves: [
         { name: 'Claw Slash', power: 18, cost: 28, type: 'NORMAL', desc: 'Fast strike' },
@@ -392,15 +405,90 @@
         { name: 'Seismic Slam', power: 33, cost: 58, type: 'EARTH', status: 'SHATTER', chance: 0.5, desc: 'Breaks DEF' },
         { name: 'Crystal Mend', power: 0, cost: 40, type: 'HEAL', heal: 34, desc: 'Heals 34 HP' },
         { name: 'Tectonic Rift', power: 55, cost: 100, type: 'EARTH', status: 'SHATTER', chance: 0.9, desc: 'Earthquake' }
+      ]},
+      // Chart additions:
+      { id: 'mew', name: 'Mew', type: 'MYTHIC', color: '#ec4899', accent: '#fbcfe8', maxHp: 132, atk: 28, def: 14, moves: [
+        { name: 'Psy Pulse', power: 19, cost: 28, type: 'NORMAL', desc: 'Mind strike' },
+        { name: 'Aura Flare', power: 35, cost: 58, type: 'FIRE', status: 'BURN', chance: 0.45, desc: 'Mythic burst' },
+        { name: 'Wish Bloom', power: 0, cost: 40, type: 'HEAL', heal: 38, desc: 'Heals 38 HP' },
+        { name: 'Genesis Nova', power: 60, cost: 100, type: 'MYTHIC', status: 'SHOCK', chance: 0.85, desc: 'Ancient surge' }
+      ]},
+      { id: 'celebi', name: 'Celebi', type: 'EARTH', color: '#22c55e', accent: '#bbf7d0', maxHp: 130, atk: 25, def: 15, moves: [
+        { name: 'Leaf Whip', power: 18, cost: 28, type: 'NORMAL', desc: 'Vine snap' },
+        { name: 'Time Quake', power: 33, cost: 58, type: 'EARTH', status: 'SHATTER', chance: 0.5, desc: 'Warps armor' },
+        { name: 'Chrono Heal', power: 0, cost: 40, type: 'HEAL', heal: 40, desc: 'Rewinds 40 HP' },
+        { name: 'Forest Wrath', power: 55, cost: 100, type: 'EARTH', status: 'SOAK', chance: 0.85, desc: 'Nature storm' }
+      ]},
+      { id: 'jirachi', name: 'Jirachi', type: 'VOLT', color: '#eab308', accent: '#fef08a', maxHp: 124, atk: 28, def: 14, moves: [
+        { name: 'Star Tap', power: 18, cost: 28, type: 'NORMAL', desc: 'Swift hit' },
+        { name: 'Doom Arc', power: 35, cost: 58, type: 'VOLT', status: 'SHOCK', chance: 0.5, desc: 'Stuns & shocks' },
+        { name: 'Wish Spark', power: 0, cost: 40, type: 'HEAL', heal: 34, desc: 'Heals 34 HP' },
+        { name: 'Comet Strike', power: 58, cost: 100, type: 'VOLT', status: 'SHOCK', chance: 0.9, desc: 'Starfall blast' }
+      ]},
+      { id: 'suicune', name: 'Suicune', type: 'WATER', color: '#3b82f6', accent: '#bfdbfe', maxHp: 145, atk: 26, def: 17, moves: [
+        { name: 'Aurora Bite', power: 19, cost: 28, type: 'NORMAL', desc: 'Chill fang' },
+        { name: 'Geyser Surge', power: 35, cost: 58, type: 'WATER', status: 'SOAK', chance: 0.55, desc: 'Slows ATB' },
+        { name: 'Pure Mist', power: 0, cost: 40, type: 'HEAL', heal: 36, desc: 'Heals 36 HP' },
+        { name: 'Tidal Crown', power: 58, cost: 100, type: 'WATER', status: 'SOAK', chance: 0.9, desc: 'Royal wave' }
+      ]},
+      { id: 'raikou', name: 'Raikou', type: 'VOLT', color: '#f59e0b', accent: '#fde68a', maxHp: 128, atk: 31, def: 13, moves: [
+        { name: 'Volt Claw', power: 20, cost: 28, type: 'NORMAL', desc: 'Rapid slash' },
+        { name: 'Storm Bolt', power: 37, cost: 58, type: 'VOLT', status: 'SHOCK', chance: 0.5, desc: 'High shock' },
+        { name: 'Static Surge', power: 0, cost: 40, type: 'HEAL', heal: 30, desc: 'Heals 30 HP' },
+        { name: 'Tempest Roar', power: 62, cost: 100, type: 'VOLT', status: 'SHOCK', chance: 0.9, desc: 'Thunder roar' }
+      ]},
+      { id: 'entei', name: 'Entei', type: 'FIRE', color: '#dc2626', accent: '#fecaca', maxHp: 148, atk: 30, def: 15, moves: [
+        { name: 'Ember Maul', power: 20, cost: 28, type: 'NORMAL', desc: 'Heavy crush' },
+        { name: 'Magma Roar', power: 36, cost: 58, type: 'FIRE', status: 'BURN', chance: 0.55, desc: 'Inflicts Burn' },
+        { name: 'Cinder Mend', power: 0, cost: 40, type: 'HEAL', heal: 34, desc: 'Heals 34 HP' },
+        { name: 'Sacred Blaze', power: 62, cost: 100, type: 'FIRE', status: 'BURN', chance: 0.9, desc: 'Volcanic roar' }
+      ]},
+      { id: 'darkrai', name: 'Darkrai', type: 'SHADOW', color: '#4f46e5', accent: '#c7d2fe', maxHp: 130, atk: 32, def: 13, moves: [
+        { name: 'Umbra Jab', power: 20, cost: 28, type: 'NORMAL', desc: 'Void strike' },
+        { name: 'Nightmare', power: 37, cost: 58, type: 'SHADOW', status: 'SHOCK', chance: 0.5, desc: 'Dread shock' },
+        { name: 'Void Drain', power: 0, cost: 40, type: 'HEAL', heal: 32, desc: 'Heals 32 HP' },
+        { name: 'Abyss Rift', power: 63, cost: 100, type: 'SHADOW', status: 'BURN', chance: 0.85, desc: 'Dark eclipse' }
+      ]},
+      { id: 'articuno', name: 'Articuno', type: 'WATER', color: '#0ea5e9', accent: '#e0f2fe', maxHp: 136, atk: 27, def: 16, moves: [
+        { name: 'Gust Wing', power: 18, cost: 28, type: 'NORMAL', desc: 'Air slice' },
+        { name: 'Glacier Jet', power: 35, cost: 58, type: 'WATER', status: 'SOAK', chance: 0.55, desc: 'Slows ATB' },
+        { name: 'Frost Veil', power: 0, cost: 40, type: 'HEAL', heal: 35, desc: 'Heals 35 HP' },
+        { name: 'Blizzard Sky', power: 58, cost: 100, type: 'WATER', status: 'SOAK', chance: 0.9, desc: 'Freezing gale' }
+      ]},
+      { id: 'zapdos', name: 'Zapdos', type: 'VOLT', color: '#facc15', accent: '#fef9c3', maxHp: 132, atk: 31, def: 14, moves: [
+        { name: 'Wing Peck', power: 19, cost: 28, type: 'NORMAL', desc: 'Fast strike' },
+        { name: 'Arc Strike', power: 36, cost: 58, type: 'VOLT', status: 'SHOCK', chance: 0.5, desc: 'Stuns & shocks' },
+        { name: 'Sky Charge', power: 0, cost: 40, type: 'HEAL', heal: 31, desc: 'Heals 31 HP' },
+        { name: 'Thunder Apex', power: 61, cost: 100, type: 'VOLT', status: 'SHOCK', chance: 0.9, desc: 'Sky lightning' }
+      ]},
+      { id: 'moltres', name: 'Moltres', type: 'FIRE', color: '#f97316', accent: '#ffedd5', maxHp: 138, atk: 31, def: 14, moves: [
+        { name: 'Flame Wing', power: 19, cost: 28, type: 'NORMAL', desc: 'Blazing hit' },
+        { name: 'Solar Flare', power: 36, cost: 58, type: 'FIRE', status: 'BURN', chance: 0.55, desc: 'Inflicts Burn' },
+        { name: 'Ash Rebirth', power: 0, cost: 40, type: 'HEAL', heal: 34, desc: 'Heals 34 HP' },
+        { name: 'Phoenix Nova', power: 62, cost: 100, type: 'FIRE', status: 'BURN', chance: 0.9, desc: 'Infernal wing' }
+      ]},
+      { id: 'rayquaza', name: 'Rayquaza', type: 'EARTH', color: '#10b981', accent: '#a7f3d0', maxHp: 152, atk: 33, def: 16, moves: [
+        { name: 'Dragon Tail', power: 21, cost: 28, type: 'NORMAL', desc: 'Heavy sweep' },
+        { name: 'Ozone Slam', power: 38, cost: 58, type: 'EARTH', status: 'SHATTER', chance: 0.55, desc: 'Breaks DEF' },
+        { name: 'Sky Restore', power: 0, cost: 40, type: 'HEAL', heal: 36, desc: 'Heals 36 HP' },
+        { name: 'Dragon Ascent', power: 66, cost: 100, type: 'EARTH', status: 'SHATTER', chance: 0.9, desc: 'Apex plunge' }
+      ]},
+      { id: 'arceus', name: 'Arceus', type: 'MYTHIC', color: '#a855f7', accent: '#f3e8ff', maxHp: 160, atk: 34, def: 18, moves: [
+        { name: 'Cosmic Jab', power: 21, cost: 28, type: 'NORMAL', desc: 'Astral hit' },
+        { name: 'Elemental Orb', power: 39, cost: 58, type: 'MYTHIC', status: 'SHATTER', chance: 0.55, desc: 'Breaks DEF' },
+        { name: 'Divine Grace', power: 0, cost: 40, type: 'HEAL', heal: 42, desc: 'Heals 42 HP' },
+        { name: 'Judgment', power: 68, cost: 100, type: 'MYTHIC', status: 'SHOCK', chance: 0.95, desc: 'Supreme blast' }
       ]}
     ];
 
     const TYPE_CHART = {
-      FIRE:  { EARTH: 1.3, VOLT: 1.15, WATER: 0.75, FIRE: 1.0 },
-      EARTH: { VOLT: 1.3, WATER: 1.1, FIRE: 0.75, EARTH: 1.0 },
-      VOLT:  { WATER: 1.3, FIRE: 1.0, EARTH: 0.7, VOLT: 1.0 },
-      WATER: { FIRE: 1.3, EARTH: 1.15, VOLT: 0.75, WATER: 1.0 },
-      NORMAL:{ FIRE: 1.0, WATER: 1.0, VOLT: 1.0, EARTH: 1.0 }
+      FIRE:   { EARTH: 1.3, VOLT: 1.15, WATER: 0.75, SHADOW: 1.15, MYTHIC: 1.0, FIRE: 1.0 },
+      EARTH:  { VOLT: 1.3, WATER: 1.1, FIRE: 0.75, SHADOW: 1.0, MYTHIC: 1.0, EARTH: 1.0 },
+      VOLT:   { WATER: 1.3, FIRE: 1.0, EARTH: 0.7, SHADOW: 1.1, MYTHIC: 1.0, VOLT: 1.0 },
+      WATER:  { FIRE: 1.3, EARTH: 1.15, VOLT: 0.75, SHADOW: 1.0, MYTHIC: 1.0, WATER: 1.0 },
+      SHADOW: { MYTHIC: 1.25, VOLT: 1.1, FIRE: 0.85, EARTH: 1.0, WATER: 1.0, SHADOW: 1.0 },
+      MYTHIC: { SHADOW: 1.25, FIRE: 1.1, WATER: 1.1, VOLT: 1.1, EARTH: 1.1, MYTHIC: 1.0 },
+      NORMAL: { FIRE: 1.0, WATER: 1.0, VOLT: 1.0, EARTH: 1.0, SHADOW: 1.0, MYTHIC: 1.0 }
     };
 
     let selectedStarterIdx = 0;
@@ -544,14 +632,14 @@
     }
 
     function initAmbientArena() {
-      const themes = ['FIRE', 'WATER', 'VOLT', 'EARTH'];
+      const themes = ['FIRE', 'WATER', 'VOLT', 'EARTH', 'MYTHIC', 'SHADOW'];
       state.arenaTheme = themes[Math.floor(Math.random() * themes.length)];
       state.ambientParticles = [];
-      for (let i = 0; i < 28; i++) {
+      for (let i = 0; i < 32; i++) {
         state.ambientParticles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 20,
+          vx: (Math.random() - 0.5) * 24,
           vy: state.arenaTheme === 'FIRE' ? -18 - Math.random() * 20 : 12 + Math.random() * 18,
           size: 1.5 + Math.random() * 2.5,
           alpha: 0.25 + Math.random() * 0.45
@@ -887,12 +975,12 @@
       ctx.globalAlpha = overrideAlpha;
 
       if (!overridePos) {
-        const auraGrad = ctx.createRadialGradient(mon.baseX, mon.baseY + 40, 4, mon.baseX, mon.baseY + 40, 58);
-        auraGrad.addColorStop(0, isFlashing ? 'rgba(255,255,255,0.75)' : `${mon.color}66`);
+        const auraGrad = ctx.createRadialGradient(mon.baseX, mon.baseY + 40, 4, mon.baseX, mon.baseY + 40, 62);
+        auraGrad.addColorStop(0, isFlashing ? 'rgba(255,255,255,0.75)' : `${mon.color}77`);
         auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = auraGrad;
         ctx.beginPath();
-        ctx.ellipse(mon.baseX, mon.baseY + 40, 56 + bob * 0.4, 15, 0, 0, Math.PI * 2);
+        ctx.ellipse(mon.baseX, mon.baseY + 40, 58 + bob * 0.4, 15, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = `${mon.color}88`;
@@ -905,7 +993,73 @@
       ctx.translate(x, y);
       ctx.scale(dir * mon.scale, mon.scale * breath);
 
-      if (mon.type === 'FIRE') {
+      // Orbiting sparks/wisps for Mythic / Shadow / Legendary graphics effect
+      if (mon.type === 'MYTHIC' || mon.type === 'SHADOW' || ['rayquaza', 'jirachi', 'celebi'].includes(mon.id)) {
+        for (let k = 0; k < 3; k++) {
+          const ang = timeSec * 3.2 + phase + (k * Math.PI * 2) / 3;
+          const ox = Math.cos(ang) * 32;
+          const oy = Math.sin(ang) * 16;
+          ctx.fillStyle = mon.accent;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      if (mon.id === 'rayquaza') {
+        const coil = Math.sin(timeSec * 6 + phase) * 8;
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-28, 14 + coil);
+        ctx.quadraticCurveTo(-10, -18 - coil, 8, 6);
+        ctx.quadraticCurveTo(20, 18 + coil, 24, -10);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#059669';
+        ctx.beginPath();
+        ctx.arc(24, -12, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(26, -15, 5, 4);
+      } else if (mon.id === 'arceus') {
+        ctx.strokeStyle = '#e879f9';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -4, 24, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 18, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(-6, -2, 12, 6);
+      } else if (mon.id === 'darkrai') {
+        const smoke = Math.sin(timeSec * 10 + phase) * 5;
+        ctx.fillStyle = '#1e1b4b';
+        ctx.strokeStyle = '#818cf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, -2, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        for (let t = -1; t <= 1; t++) {
+          ctx.beginPath();
+          ctx.moveTo(t * 10, 12);
+          ctx.quadraticCurveTo(t * 14 + smoke, 26, t * 8, 34);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(4, -6, 6, 3);
+      } else if (mon.type === 'FIRE') {
         const wingFlap = Math.sin(timeSec * 9 + phase) * 0.35 + (mon.attackAnim > 0 ? -0.45 : 0);
         ctx.save();
         ctx.translate(-8, -8);
@@ -923,7 +1077,7 @@
 
         const tailSway = Math.sin(timeSec * 6 + phase) * 6;
         const flicker = Math.sin(timeSec * 24) * 5;
-        ctx.strokeStyle = '#ea580c';
+        ctx.strokeStyle = mon.color;
         ctx.lineWidth = 6;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -934,7 +1088,7 @@
         const tailY = -4 + tailSway;
         const flameGrad = ctx.createRadialGradient(-42, tailY - 4, 2, -42, tailY - 6, 15);
         flameGrad.addColorStop(0, '#fef08a');
-        flameGrad.addColorStop(0.55, '#f97316');
+        flameGrad.addColorStop(0.55, mon.color);
         flameGrad.addColorStop(1, 'rgba(220,38,38,0)');
         ctx.fillStyle = flameGrad;
         ctx.beginPath();
@@ -943,165 +1097,45 @@
         ctx.quadraticCurveTo(-32, tailY - 8, -42, tailY + 4);
         ctx.fill();
 
-        const bodyGrad = ctx.createLinearGradient(-18, -24, 24, 26);
-        bodyGrad.addColorStop(0, '#fb923c');
-        bodyGrad.addColorStop(0.55, '#ea580c');
-        bodyGrad.addColorStop(1, '#7c2d12');
-        ctx.fillStyle = bodyGrad;
+        ctx.fillStyle = mon.color;
         ctx.beginPath();
-        ctx.ellipse(-2, 5, 23, 21, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(-2, 5, 22, 20, -0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#fed7aa';
+        ctx.fillStyle = mon.accent;
         ctx.beginPath();
-        ctx.ellipse(6, 11, 13, 14, -0.15, -Math.PI * 0.4, Math.PI * 0.55);
+        ctx.ellipse(6, 11, 12, 13, -0.15, -Math.PI * 0.4, Math.PI * 0.55);
         ctx.fill();
-
-        const clawReach = mon.attackAnim > 0 ? 10 : Math.sin(timeSec * 5) * 2;
-        ctx.fillStyle = '#c2410c';
-        ctx.beginPath();
-        ctx.ellipse(12 + clawReach, 8, 9, 5, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-
-        const headNod = mon.attackAnim > 0 ? 0.18 : Math.sin(timeSec * 4.8 + phase) * 0.05;
-        ctx.save();
-        ctx.translate(10, -14);
-        ctx.rotate(headNod);
-        ctx.fillStyle = bodyGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, 14.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#fef3c7';
-        ctx.beginPath();
-        ctx.moveTo(-5, -10);
-        ctx.lineTo(-18, -24);
-        ctx.lineTo(1, -12);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#c2410c';
-        ctx.beginPath();
-        ctx.ellipse(12, 3, 9, 6.5, 0.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = mon.hurtTimer > 0 ? '#ffffff' : '#fef08a';
-        ctx.beginPath();
-        ctx.moveTo(1, -4);
-        ctx.lineTo(10, -1);
-        ctx.lineTo(2, 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-
       } else if (mon.type === 'WATER') {
         const wave = Math.sin(timeSec * 7.5 + phase) * 5;
-
-        ctx.save();
-        ctx.translate(-18, 10);
-        ctx.rotate(Math.sin(timeSec * 7.5 + phase) * 0.22);
-        const finGrad = ctx.createLinearGradient(-30, -20, 5, 20);
-        finGrad.addColorStop(0, '#67e8f9');
-        finGrad.addColorStop(1, '#1d4ed8');
-        ctx.fillStyle = finGrad;
+        ctx.fillStyle = mon.color;
         ctx.beginPath();
-        ctx.moveTo(0, -2);
-        ctx.quadraticCurveTo(-22, -18, -30, -28);
-        ctx.quadraticCurveTo(-16, -2, -28, 18);
-        ctx.quadraticCurveTo(-14, 10, 0, 6);
-        ctx.closePath();
+        ctx.ellipse(0, 2, 25, 19, -0.15, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
+
+        ctx.fillStyle = mon.accent;
+        ctx.beginPath();
+        ctx.ellipse(4, 10, 17, 8, -0.1, 0, Math.PI);
+        ctx.fill();
 
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
         ctx.moveTo(-10, -15);
-        ctx.quadraticCurveTo(-2, -38 + wave * 0.4, 9, -22);
-        ctx.lineTo(4, -11);
+        ctx.quadraticCurveTo(-2, -36 + wave * 0.4, 9, -20);
         ctx.closePath();
         ctx.fill();
-
-        const waterGrad = ctx.createRadialGradient(6, -8, 4, 0, 4, 30);
-        waterGrad.addColorStop(0, '#38bdf8');
-        waterGrad.addColorStop(0.6, '#2563eb');
-        waterGrad.addColorStop(1, '#1e3a8a');
-        ctx.fillStyle = waterGrad;
-        ctx.beginPath();
-        ctx.ellipse(0, 2, 26, 19.5, -0.15, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#bae6fd';
-        ctx.beginPath();
-        ctx.ellipse(4, 10.5, 18, 8.5, -0.1, 0, Math.PI);
-        ctx.fill();
-
-        ctx.strokeStyle = '#0284c7';
-        ctx.lineWidth = 2;
-        for (let g = -2; g <= 4; g += 3) {
-          ctx.beginPath();
-          ctx.arc(g, 2, 7.5, -0.4, 0.5);
-          ctx.stroke();
-        }
-
-        ctx.save();
-        ctx.translate(2, 8);
-        ctx.rotate(Math.sin(timeSec * 8 + phase) * 0.3);
-        ctx.fillStyle = '#7dd3fc';
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-10, 14);
-        ctx.lineTo(6, 10);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
 
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.ellipse(15, -4, 5, 3.6, -0.2, 0, Math.PI * 2);
+        ctx.arc(15, -4, 4.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.arc(16.5, -4, 2.1, 0, Math.PI * 2);
+        ctx.arc(16.5, -4, 2, 0, Math.PI * 2);
         ctx.fill();
-
       } else if (mon.type === 'VOLT') {
         const jitter = Math.sin(timeSec * 32) * 2.5;
-
-        ctx.save();
-        ctx.translate(-16, 8);
-        ctx.rotate(Math.sin(timeSec * 12) * 0.15);
-        ctx.fillStyle = '#facc15';
-        ctx.strokeStyle = '#fef08a';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-18, -12 + jitter);
-        ctx.lineTo(-12, -2);
-        ctx.lineTo(-30, -20 - jitter);
-        ctx.lineTo(-6, 8);
-        ctx.lineTo(-12, 0);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.fillStyle = '#854d0e';
-        ctx.beginPath();
-        ctx.moveTo(-16, -15);
-        ctx.lineTo(-26, -28);
-        ctx.lineTo(-8, -21);
-        ctx.lineTo(-13, -36);
-        ctx.lineTo(2, -23);
-        ctx.lineTo(12, -37);
-        ctx.lineTo(16, -19);
-        ctx.closePath();
-        ctx.fill();
-
-        const voltGrad = ctx.createLinearGradient(-22, -22, 22, 24);
-        voltGrad.addColorStop(0, '#fef08a');
-        voltGrad.addColorStop(0.45, '#eab308');
-        voltGrad.addColorStop(1, '#713f12');
-        ctx.fillStyle = voltGrad;
+        ctx.fillStyle = mon.color;
         ctx.beginPath();
         ctx.moveTo(-22, 6);
         ctx.lineTo(-14, -18);
@@ -1112,22 +1146,12 @@
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(4, -3);
-        ctx.lineTo(22, -1);
-        ctx.lineTo(14, 17);
-        ctx.lineTo(0, 13);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(17, 1);
-        ctx.lineTo(19.5, 8);
-        ctx.lineTo(22, 1);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(-16, 4);
+        ctx.lineTo(-32, -16 + jitter);
+        ctx.stroke();
 
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
@@ -1136,23 +1160,9 @@
         ctx.lineTo(12, -7);
         ctx.closePath();
         ctx.fill();
-
       } else {
         const orbit = timeSec * 2.5 + phase;
-
-        ctx.fillStyle = '#4ade80';
-        ctx.beginPath();
-        ctx.moveTo(-24, -16 + Math.sin(orbit) * 4);
-        ctx.lineTo(-18, -32 + Math.sin(orbit) * 4);
-        ctx.lineTo(-12, -16 + Math.sin(orbit) * 4);
-        ctx.closePath();
-        ctx.fill();
-
-        const stoneGrad = ctx.createLinearGradient(-22, -24, 22, 24);
-        stoneGrad.addColorStop(0, '#475569');
-        stoneGrad.addColorStop(0.5, '#1e293b');
-        stoneGrad.addColorStop(1, '#0f172a');
-        ctx.fillStyle = stoneGrad;
+        ctx.fillStyle = mon.color;
         ctx.beginPath();
         ctx.moveTo(-20, 18);
         ctx.lineTo(-24, -10);
@@ -1163,7 +1173,7 @@
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = '#22c55e';
+        ctx.fillStyle = mon.accent;
         ctx.beginPath();
         ctx.moveTo(2, -6);
         ctx.lineTo(10, 2);
@@ -1172,17 +1182,10 @@
         ctx.closePath();
         ctx.fill();
 
-        const punchOffset = mon.attackAnim > 0 ? 14 : Math.sin(timeSec * 4 + phase) * 2.5;
-        ctx.fillStyle = '#334155';
-        ctx.strokeStyle = '#22c55e';
-        ctx.lineWidth = 2;
+        ctx.fillStyle = '#4ade80';
         ctx.beginPath();
-        ctx.roundRect(4 + punchOffset, 2, 22, 16, 5);
+        ctx.arc(-18, -22 + Math.sin(orbit) * 4, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#86efac';
-        ctx.fillRect(6, -15, 13, 4);
       }
 
       if (mon.guardTimer > 0 && !overridePos) {
@@ -1222,7 +1225,14 @@
         ctx.stroke();
       }
 
-      const themeColors = { FIRE: '#f97316', WATER: '#38bdf8', VOLT: '#facc15', EARTH: '#4ade80' };
+      const themeColors = {
+        FIRE: '#f97316',
+        WATER: '#38bdf8',
+        VOLT: '#facc15',
+        EARTH: '#4ade80',
+        MYTHIC: '#e879f9',
+        SHADOW: '#818cf8'
+      };
       const pColor = themeColors[state.arenaTheme] || '#38bdf8';
 
       state.ambientParticles.forEach(ap => {
